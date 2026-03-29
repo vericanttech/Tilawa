@@ -1,0 +1,74 @@
+/* Common */
+"common.back" = "← رجوع";
+"common.done" = "تم";
+"common.cancel" = "إلغاء";
+"common.reset" = "إعادة تعيين";
+"common.ok" = "موافق";
+
+/* Home */
+"home.guarded_apps" = "التطبيقات المحمية";
+"home.manage" = "إدارة";
+"home.guarded_apps_hint" = "التطبيقات المحمية (اضغط إدارة للإضافة)";
+"home.ayahs_read" = "الآيات المقروءة";
+"home.ayahs" = "الآيات";
+"home.streak" = "السلسلة";
+"home.today" = "اليوم";
+"home.view_gate_screen" = "عرض شاشة القراءة";
+"home.simulator_preview" = "معاينة المحاكي";
+"home.read_to_unlock" = "اقرأ آية · افتح التطبيقات";
+
+/* Gate */
+"gate.surah_format" = "سورة %@";
+"gate.ayahs_read" = "الآيات المقروءة";
+"gate.day_streak" = "أيام متتالية";
+"gate.today" = "اليوم";
+"gate.reading" = "جاري القراءة...";
+"gate.continue_to_app" = "تم · إلغاء قفل التطبيقات";
+
+/* Setup */
+"setup.setup" = "الإعداد";
+"setup.your_surah" = "سورتك";
+"setup.your_surah_subtitle" = "اختر السورة التي تريد قراءتها";
+"setup.choose_surah" = "اختر سورتك";
+"setup.search_surah" = "البحث في السور...";
+"setup.ayahs_meta" = "%d آيات · %@";
+"setup.guarded_apps" = "التطبيقات المحمية";
+"setup.add_another_app" = "إضافة تطبيق آخر...";
+"setup.add_app_device_only" = "إضافة تطبيق (على الجهاز فقط)";
+"setup.simulator_alert_title" = "المحاكي";
+"setup.simulator_alert_message" = "التطبيقات المحمية تتطلب جهازاً حقيقياً. ضوابط العائلة لا تعمل في المحاكي.";
+
+/* Settings */
+"settings.settings" = "الإعدادات";
+"settings.language" = "اللغة";
+"settings.reading" = "القراءة";
+"settings.reading_speed" = "سرعة القراءة";
+"settings.reading_speed_subtitle" = "يحدد الحد الأدنى للوقت لكل مقطع";
+"settings.slow" = "بطيء";
+"settings.normal" = "عادي";
+"settings.fast" = "سريع";
+"settings.show_transliteration" = "إظهار الترجمة الصوتية";
+"settings.transliteration_subtitle" = "دليل النطق بالأحرف اللاتينية تحت العربية";
+"settings.guarded_apps" = "التطبيقات المحمية";
+"settings.guarded_apps_subtitle" = "اختر التطبيقات التي تتطلب لحظة قراءة قبل الفتح.";
+"settings.add_app" = "إضافة تطبيق...";
+"settings.choose_apps_to_guard" = "اختر التطبيقات لحمايتها";
+"settings.app" = "تطبيق";
+"settings.data" = "البيانات";
+"settings.reset_progress" = "إعادة تعيين التقدم";
+"settings.reset_progress_subtitle" = "يمسح السلسلة وعدد الآيات";
+"settings.reset_confirm_title" = "إعادة تعيين كل التقدم؟";
+"settings.reset_confirm_message" = "سيتم مسح سلسلتك وعدد الآيات. سورتك والتطبيقات المحمية تبقى كما هي.";
+"settings.privacy_policy" = "سياسة الخصوصية";
+"settings.version_format" = "الإصدار %@";
+"settings.about_quran_from" = "نص القرآن من ";
+"settings.about_uthmanic" = " · خط عثمان حفص";
+"settings.about_transliteration_from" = "الترجمة الصوتية من ";
+"settings.about_made_with" = "صُنع باهتمام للمجتمع المسلم";
+
+/* Surah card */
+"surah_card.current_surah" = "السورة الحالية";
+"surah_card.change" = "تغيير";
+"surah_card.progress" = "التقدم";
+"surah_card.of_ayahs" = "%d من %d آيات";
+"surah_card.up_next_ayah" = "التالي — آية %d";

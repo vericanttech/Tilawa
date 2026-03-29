@@ -1,0 +1,74 @@
+/* Common */
+"common.back" = "← Retour";
+"common.done" = "Terminé";
+"common.cancel" = "Annuler";
+"common.reset" = "Réinitialiser";
+"common.ok" = "OK";
+
+/* Home */
+"home.guarded_apps" = "Apps protégées";
+"home.manage" = "Gérer";
+"home.guarded_apps_hint" = "Apps protégées (appuyez sur Gérer pour ajouter)";
+"home.ayahs_read" = "Âyahs lus";
+"home.ayahs" = "Âyahs";
+"home.streak" = "Série";
+"home.today" = "Aujourd'hui";
+"home.view_gate_screen" = "Voir l'écran de lecture";
+"home.simulator_preview" = "Aperçu simulateur";
+"home.read_to_unlock" = "Lire une âyah · débloquer les apps";
+
+/* Gate */
+"gate.surah_format" = "Sourate %@";
+"gate.ayahs_read" = "Âyahs lus";
+"gate.day_streak" = "Jours de série";
+"gate.today" = "Aujourd'hui";
+"gate.reading" = "Lecture...";
+"gate.continue_to_app" = "Terminé · débloquer les apps";
+
+/* Setup */
+"setup.setup" = "Configuration";
+"setup.your_surah" = "Votre sourate";
+"setup.your_surah_subtitle" = "Choisissez la sourate que vous voulez lire";
+"setup.choose_surah" = "Choisissez votre sourate";
+"setup.search_surah" = "Rechercher une sourate...";
+"setup.ayahs_meta" = "%d âyahs · %@";
+"setup.guarded_apps" = "Apps protégées";
+"setup.add_another_app" = "Ajouter une autre app...";
+"setup.add_app_device_only" = "Ajouter une app (appareil uniquement)";
+"setup.simulator_alert_title" = "Simulateur";
+"setup.simulator_alert_message" = "Les apps protégées nécessitent un appareil réel. Les contrôles familiaux ne fonctionnent pas dans le simulateur.";
+
+/* Settings */
+"settings.settings" = "Réglages";
+"settings.language" = "Langue";
+"settings.reading" = "Lecture";
+"settings.reading_speed" = "Vitesse de lecture";
+"settings.reading_speed_subtitle" = "Définit le temps minimum par passage";
+"settings.slow" = "Lent";
+"settings.normal" = "Normal";
+"settings.fast" = "Rapide";
+"settings.show_transliteration" = "Afficher la translittération";
+"settings.transliteration_subtitle" = "Guide de prononciation en latin sous l'arabe";
+"settings.guarded_apps" = "Apps protégées";
+"settings.guarded_apps_subtitle" = "Choisissez les apps qui demandent un moment de lecture avant d'ouvrir.";
+"settings.add_app" = "Ajouter une app...";
+"settings.choose_apps_to_guard" = "Choisir les apps à protéger";
+"settings.app" = "App";
+"settings.data" = "Données";
+"settings.reset_progress" = "Réinitialiser la progression";
+"settings.reset_progress_subtitle" = "Efface la série et le nombre d'âyahs";
+"settings.reset_confirm_title" = "Tout réinitialiser ?";
+"settings.reset_confirm_message" = "Votre série et votre nombre d'âyahs seront effacés. Votre sourate et vos apps protégées restent inchangés.";
+"settings.privacy_policy" = "Politique de confidentialité";
+"settings.version_format" = "Version %@";
+"settings.about_quran_from" = "Texte du Coran : ";
+"settings.about_uthmanic" = " · Script Uthmanic Hafs";
+"settings.about_transliteration_from" = "Transliteration : ";
+"settings.about_made_with" = "Fait avec soin pour la communauté musulmane";
+
+/* Surah card */
+"surah_card.current_surah" = "Sourate actuelle";
+"surah_card.change" = "Changer";
+"surah_card.progress" = "Progression";
+"surah_card.of_ayahs" = "%d sur %d âyahs";
+"surah_card.up_next_ayah" = "À suivre — âyah %d";

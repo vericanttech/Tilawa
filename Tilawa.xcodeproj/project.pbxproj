@@ -1,0 +1,1046 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 70;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B1001 /* TilawaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1001 /* TilawaApp.swift */; };
+		B1002 /* Surah.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1002 /* Surah.swift */; };
+		B1003 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1003 /* AppState.swift */; };
+		B1004 /* QuranService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1004 /* QuranService.swift */; };
+		B1005 /* ShieldService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1005 /* ShieldService.swift */; };
+		B1006 /* StatsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1006 /* StatsService.swift */; };
+		B1007 /* AppStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1007 /* AppStateStore.swift */; };
+		B1008 /* GateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1008 /* GateView.swift */; };
+		B1009 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1009 /* HomeView.swift */; };
+		B1010 /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1010 /* SetupView.swift */; };
+		B1011 /* AyahBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1011 /* AyahBlock.swift */; };
+		B1012 /* TimerBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1012 /* TimerBar.swift */; };
+		B1013 /* UnlockButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1013 /* UnlockButton.swift */; };
+		B1014 /* SurahCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1014 /* SurahCard.swift */; };
+		B1015 /* StatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1015 /* StatCard.swift */; };
+		B1016 /* AppRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1016 /* AppRow.swift */; };
+		B1017 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1017 /* Color+Hex.swift */; };
+		B1018 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1018 /* DesignTokens.swift */; };
+		B1019 /* tilawa_quran.json in Resources */ = {isa = PBXBuildFile; fileRef = F1019 /* tilawa_quran.json */; };
+		B1020 /* SimulatorCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1020 /* SimulatorCheck.swift */; };
+		B1021 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1021 /* SettingsView.swift */; };
+		B1022 /* en.lproj/Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = F1022 /* en.lproj/Localizable.strings */; };
+		B1023 /* fr.lproj/Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = F1023 /* fr.lproj/Localizable.strings */; };
+		B1024 /* ar.lproj/Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = F1024 /* ar.lproj/Localizable.strings */; };
+		B1025 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1025 /* Localization.swift */; };
+		B2001 /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2001 /* ShieldConfigurationExtension.swift */; };
+		B2030 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB1B34DE2F6837ED00F316C0 /* DeviceActivity.framework */; };
+		FB1B34F52F686D2E00F316C0 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB1B34DE2F6837ED00F316C0 /* DeviceActivity.framework */; };
+		FB1B34FD2F686D2F00F316C0 /* TilawaMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FB1B34F42F686D2E00F316C0 /* TilawaMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FB7873132F692E1B00830474 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MSREF1 /* ManagedSettings.framework */; };
+		UNBLD1 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = UNREF1 /* UserNotifications.framework */; };
+		FB78731B2F692E1B00830474 /* ShieldActionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FB7873122F692E1B00830474 /* ShieldActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FBFA7A102F670B04004DA9DA /* Lateef-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FBFA7A0B2F670B04004DA9DA /* Lateef-Regular.ttf */; };
+		FBFA7A112F670B04004DA9DA /* CormorantGaramond-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FBFA7A0C2F670B04004DA9DA /* CormorantGaramond-Italic.ttf */; };
+		FBFA7A122F670B04004DA9DA /* CormorantGaramond-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FBFA7A0D2F670B04004DA9DA /* CormorantGaramond-Medium.ttf */; };
+		FBFA7A132F670B04004DA9DA /* Amiri-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FBFA7A0E2F670B04004DA9DA /* Amiri-Regular.ttf */; };
+		FBFA7A142F670B04004DA9DA /* CormorantGaramond-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FBFA7A0F2F670B04004DA9DA /* CormorantGaramond-Regular.ttf */; };
+		FCBLD1 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCREF1 /* FamilyControls.framework */; };
+		MSBLD1 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MSREF1 /* ManagedSettings.framework */; };
+		TILFC01 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCREF1 /* FamilyControls.framework */; };
+		TILMS01 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MSREF1 /* ManagedSettings.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		FB1B34FB2F686D2F00F316C0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = PROJ1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FB1B34F32F686D2E00F316C0;
+			remoteInfo = TilawaMonitor;
+		};
+		FB7873192F692E1B00830474 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = PROJ1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FB7873112F692E1B00830474;
+			remoteInfo = ShieldActionExtension;
+		};
+		PROXY1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = PROJ1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EXTTGT;
+			remoteInfo = ShieldConfigurationExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		EMBED1 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				FB1B34FD2F686D2F00F316C0 /* TilawaMonitor.appex in Embed Foundation Extensions */,
+				FB78731B2F692E1B00830474 /* ShieldActionExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		APPREF /* Tilawa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tilawa.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2001 /* ShieldConfigurationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShieldConfigurationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F1001 /* TilawaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TilawaApp.swift; sourceTree = "<group>"; };
+		F1002 /* Surah.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Surah.swift; sourceTree = "<group>"; };
+		F1003 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		F1004 /* QuranService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranService.swift; sourceTree = "<group>"; };
+		F1005 /* ShieldService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldService.swift; sourceTree = "<group>"; };
+		F1006 /* StatsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsService.swift; sourceTree = "<group>"; };
+		F1007 /* AppStateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateStore.swift; sourceTree = "<group>"; };
+		F1008 /* GateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateView.swift; sourceTree = "<group>"; };
+		F1009 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		F1010 /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
+		F1011 /* AyahBlock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyahBlock.swift; sourceTree = "<group>"; };
+		F1012 /* TimerBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerBar.swift; sourceTree = "<group>"; };
+		F1013 /* UnlockButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockButton.swift; sourceTree = "<group>"; };
+		F1014 /* SurahCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurahCard.swift; sourceTree = "<group>"; };
+		F1015 /* StatCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCard.swift; sourceTree = "<group>"; };
+		F1016 /* AppRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRow.swift; sourceTree = "<group>"; };
+		F1017 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
+		F1018 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		F1019 /* tilawa_quran.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tilawa_quran.json; sourceTree = "<group>"; };
+		F1020 /* SimulatorCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorCheck.swift; sourceTree = "<group>"; };
+		F1021 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F1022 /* en.lproj/Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		F1023 /* fr.lproj/Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
+		F1024 /* ar.lproj/Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = ar.lproj/Localizable.strings; sourceTree = "<group>"; };
+		F1025 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		F2001 /* ShieldConfigurationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldConfigurationExtension.swift; sourceTree = "<group>"; };
+		FB1B34D62F68320400F316C0 /* ShieldConfigurationExtensionDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShieldConfigurationExtensionDebug.entitlements; sourceTree = "<group>"; };
+		FB1B34D72F68323600F316C0 /* TilawaDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TilawaDebug.entitlements; sourceTree = "<group>"; };
+		FB1B34DE2F6837ED00F316C0 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		FB1B34F42F686D2E00F316C0 /* TilawaMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TilawaMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		FB7873122F692E1B00830474 /* ShieldActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShieldActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		FBFA7A0B2F670B04004DA9DA /* Lateef-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Lateef-Regular.ttf"; path = "Tilawa/Resources/Lateef-Regular.ttf"; sourceTree = "<group>"; };
+		FBFA7A0C2F670B04004DA9DA /* CormorantGaramond-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "CormorantGaramond-Italic.ttf"; path = "Tilawa/Resources/CormorantGaramond-Italic.ttf"; sourceTree = "<group>"; };
+		FBFA7A0D2F670B04004DA9DA /* CormorantGaramond-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "CormorantGaramond-Medium.ttf"; path = "Tilawa/Resources/CormorantGaramond-Medium.ttf"; sourceTree = "<group>"; };
+		FBFA7A0E2F670B04004DA9DA /* Amiri-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Amiri-Regular.ttf"; path = "Tilawa/Resources/Amiri-Regular.ttf"; sourceTree = "<group>"; };
+		FBFA7A0F2F670B04004DA9DA /* CormorantGaramond-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "CormorantGaramond-Regular.ttf"; path = "Tilawa/Resources/CormorantGaramond-Regular.ttf"; sourceTree = "<group>"; };
+		FCREF1 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
+		UNREF1 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
+		MSREF1 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		FB1B35002F686D2F00F316C0 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = FB1B34F32F686D2E00F316C0 /* TilawaMonitor */;
+		};
+		FB78731E2F692E1B00830474 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = FB7873112F692E1B00830474 /* ShieldActionExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		FB1B34E02F6837ED00F316C0 /* TilawaMonitor */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = TilawaMonitor; sourceTree = "<group>"; };
+		FB1B34F62F686D2E00F316C0 /* TilawaMonitor */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (FB1B35002F686D2F00F316C0 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TilawaMonitor; sourceTree = "<group>"; };
+		FB7873142F692E1B00830474 /* ShieldActionExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (FB78731E2F692E1B00830474 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ShieldActionExtension; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FB1B34F12F686D2E00F316C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FB1B34F52F686D2E00F316C0 /* DeviceActivity.framework in Frameworks */,
+				MSBLD1 /* ManagedSettings.framework in Frameworks */,
+				FCBLD1 /* FamilyControls.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FB78730F2F692E1B00830474 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FB7873132F692E1B00830474 /* ManagedSettings.framework in Frameworks */,
+				UNBLD1 /* UserNotifications.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FRAM01 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2030 /* DeviceActivity.framework in Frameworks */,
+				TILFC01 /* FamilyControls.framework in Frameworks */,
+				TILMS01 /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FRAM02 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		BUILT /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				APPREF /* Tilawa.app */,
+				E2001 /* ShieldConfigurationExtension.appex */,
+				FB1B34F42F686D2E00F316C0 /* TilawaMonitor.appex */,
+				FB7873122F692E1B00830474 /* ShieldActionExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FB1B34DD2F6837ED00F316C0 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				FB1B34DE2F6837ED00F316C0 /* DeviceActivity.framework */,
+				MSREF1 /* ManagedSettings.framework */,
+				FCREF1 /* FamilyControls.framework */,
+				UNREF1 /* UserNotifications.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		GCOMP /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				F1011 /* AyahBlock.swift */,
+				F1012 /* TimerBar.swift */,
+				F1013 /* UnlockButton.swift */,
+				F1014 /* SurahCard.swift */,
+				F1015 /* StatCard.swift */,
+				F1016 /* AppRow.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		GEXTN /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				F1017 /* Color+Hex.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		GMODL /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F1002 /* Surah.swift */,
+				F1003 /* AppState.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		GRESC /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F1019 /* tilawa_quran.json */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		GROOT = {
+			isa = PBXGroup;
+			children = (
+				FBFA7A0E2F670B04004DA9DA /* Amiri-Regular.ttf */,
+				FBFA7A0C2F670B04004DA9DA /* CormorantGaramond-Italic.ttf */,
+				FBFA7A0D2F670B04004DA9DA /* CormorantGaramond-Medium.ttf */,
+				FBFA7A0F2F670B04004DA9DA /* CormorantGaramond-Regular.ttf */,
+				FBFA7A0B2F670B04004DA9DA /* Lateef-Regular.ttf */,
+				GTILA /* Tilawa */,
+				GSHIE /* ShieldConfigurationExtension */,
+				FB1B34E02F6837ED00F316C0 /* TilawaMonitor */,
+				FB1B34F62F686D2E00F316C0 /* TilawaMonitor */,
+				FB7873142F692E1B00830474 /* ShieldActionExtension */,
+				FB1B34DD2F6837ED00F316C0 /* Frameworks */,
+				BUILT /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		GSHIE /* ShieldConfigurationExtension */ = {
+			isa = PBXGroup;
+			children = (
+				FB1B34D62F68320400F316C0 /* ShieldConfigurationExtensionDebug.entitlements */,
+				F2001 /* ShieldConfigurationExtension.swift */,
+			);
+			path = ShieldConfigurationExtension;
+			sourceTree = "<group>";
+		};
+		GSRVC /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F1004 /* QuranService.swift */,
+				F1005 /* ShieldService.swift */,
+				F1006 /* StatsService.swift */,
+				F1007 /* AppStateStore.swift */,
+				F1025 /* Localization.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		GTHEM /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				F1018 /* DesignTokens.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		GTILA /* Tilawa */ = {
+			isa = PBXGroup;
+			children = (
+				FB1B34D72F68323600F316C0 /* TilawaDebug.entitlements */,
+				F1001 /* TilawaApp.swift */,
+				GMODL /* Models */,
+				GSRVC /* Services */,
+				GVIEW /* Views */,
+				GCOMP /* Components */,
+				GEXTN /* Extensions */,
+				GTHEM /* Theme */,
+				GUTIL /* Utilities */,
+				GRESC /* Resources */,
+				F1022 /* en.lproj/Localizable.strings */,
+				F1023 /* fr.lproj/Localizable.strings */,
+				F1024 /* ar.lproj/Localizable.strings */,
+			);
+			path = Tilawa;
+			sourceTree = "<group>";
+		};
+		GUTIL /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				F1020 /* SimulatorCheck.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		GVIEW /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F1008 /* GateView.swift */,
+				F1009 /* HomeView.swift */,
+				F1010 /* SetupView.swift */,
+				F1021 /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EXTTGT /* ShieldConfigurationExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CONFL2 /* Build configuration list for PBXNativeTarget "ShieldConfigurationExtension" */;
+			buildPhases = (
+				SRC02 /* Sources */,
+				FRAM02 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShieldConfigurationExtension;
+			productName = ShieldConfigurationExtension;
+			productReference = E2001 /* ShieldConfigurationExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		FB1B34F32F686D2E00F316C0 /* TilawaMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FB1B35012F686D2F00F316C0 /* Build configuration list for PBXNativeTarget "TilawaMonitor" */;
+			buildPhases = (
+				FB1B34F02F686D2E00F316C0 /* Sources */,
+				FB1B34F12F686D2E00F316C0 /* Frameworks */,
+				FB1B34F22F686D2E00F316C0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				FB1B34F62F686D2E00F316C0 /* TilawaMonitor */,
+			);
+			name = TilawaMonitor;
+			packageProductDependencies = (
+			);
+			productName = TilawaMonitor;
+			productReference = FB1B34F42F686D2E00F316C0 /* TilawaMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		FB7873112F692E1B00830474 /* ShieldActionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FB78731F2F692E1B00830474 /* Build configuration list for PBXNativeTarget "ShieldActionExtension" */;
+			buildPhases = (
+				FB78730E2F692E1B00830474 /* Sources */,
+				FB78730F2F692E1B00830474 /* Frameworks */,
+				FB7873102F692E1B00830474 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				FB7873142F692E1B00830474 /* ShieldActionExtension */,
+			);
+			name = ShieldActionExtension;
+			packageProductDependencies = (
+			);
+			productName = ShieldActionExtension;
+			productReference = FB7873122F692E1B00830474 /* ShieldActionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		TILTGT /* Tilawa */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CONFL1 /* Build configuration list for PBXNativeTarget "Tilawa" */;
+			buildPhases = (
+				SRC01 /* Sources */,
+				FRAM01 /* Frameworks */,
+				RESC01 /* Resources */,
+				EMBED1 /* Embed Foundation Extensions */,
+				RUNSIM /* Embed or strip extension by destination */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DEPEXT /* PBXTargetDependency */,
+				FB1B34FC2F686D2F00F316C0 /* PBXTargetDependency */,
+				FB78731A2F692E1B00830474 /* PBXTargetDependency */,
+			);
+			name = Tilawa;
+			productName = Tilawa;
+			productReference = APPREF /* Tilawa.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		PROJ1 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					FB1B34F32F686D2E00F316C0 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					FB7873112F692E1B00830474 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+				};
+			};
+			buildConfigurationList = CONFL0 /* Build configuration list for PBXProject "Tilawa" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				ar,
+			);
+			mainGroup = GROOT;
+			productRefGroup = BUILT /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				TILTGT /* Tilawa */,
+				EXTTGT /* ShieldConfigurationExtension */,
+				FB1B34F32F686D2E00F316C0 /* TilawaMonitor */,
+				FB7873112F692E1B00830474 /* ShieldActionExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		FB1B34F22F686D2E00F316C0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FB7873102F692E1B00830474 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		RESC01 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FBFA7A102F670B04004DA9DA /* Lateef-Regular.ttf in Resources */,
+				FBFA7A112F670B04004DA9DA /* CormorantGaramond-Italic.ttf in Resources */,
+				FBFA7A122F670B04004DA9DA /* CormorantGaramond-Medium.ttf in Resources */,
+				FBFA7A132F670B04004DA9DA /* Amiri-Regular.ttf in Resources */,
+				FBFA7A142F670B04004DA9DA /* CormorantGaramond-Regular.ttf in Resources */,
+				B1019 /* tilawa_quran.json in Resources */,
+				B1022 /* en.lproj/Localizable.strings in Resources */,
+				B1023 /* fr.lproj/Localizable.strings in Resources */,
+				B1024 /* ar.lproj/Localizable.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		RUNSIM /* Embed or strip extension by destination */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed or strip extension by destination";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "APP_PLUGINS=\"$BUILT_PRODUCTS_DIR/$WRAPPER_NAME/PlugIns\"\nEXT_APPEX=\"$BUILT_PRODUCTS_DIR/ShieldConfigurationExtension.appex\"\nif [ \"$PLATFORM_NAME\" = \"iphonesimulator\" ]; then\n  rm -rf \"$APP_PLUGINS\"\nelif [ -d \"$EXT_APPEX\" ] || [ -f \"$EXT_APPEX\" ]; then\n  mkdir -p \"$APP_PLUGINS\"\n  cp -R \"$EXT_APPEX\" \"$APP_PLUGINS/\"\nfi\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FB1B34F02F686D2E00F316C0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FB78730E2F692E1B00830474 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		SRC01 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1001 /* TilawaApp.swift in Sources */,
+				B1002 /* Surah.swift in Sources */,
+				B1003 /* AppState.swift in Sources */,
+				B1004 /* QuranService.swift in Sources */,
+				B1005 /* ShieldService.swift in Sources */,
+				B1006 /* StatsService.swift in Sources */,
+				B1007 /* AppStateStore.swift in Sources */,
+				B1008 /* GateView.swift in Sources */,
+				B1009 /* HomeView.swift in Sources */,
+				B1010 /* SetupView.swift in Sources */,
+				B1021 /* SettingsView.swift in Sources */,
+				B1025 /* Localization.swift in Sources */,
+				B1011 /* AyahBlock.swift in Sources */,
+				B1012 /* TimerBar.swift in Sources */,
+				B1013 /* UnlockButton.swift in Sources */,
+				B1014 /* SurahCard.swift in Sources */,
+				B1015 /* StatCard.swift in Sources */,
+				B1016 /* AppRow.swift in Sources */,
+				B1017 /* Color+Hex.swift in Sources */,
+				B1018 /* DesignTokens.swift in Sources */,
+				B1020 /* SimulatorCheck.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		SRC02 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2001 /* ShieldConfigurationExtension.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DEPEXT /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EXTTGT /* ShieldConfigurationExtension */;
+			targetProxy = PROXY1 /* PBXContainerItemProxy */;
+		};
+		FB1B34FC2F686D2F00F316C0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FB1B34F32F686D2E00F316C0 /* TilawaMonitor */;
+			targetProxy = FB1B34FB2F686D2F00F316C0 /* PBXContainerItemProxy */;
+		};
+		FB78731A2F692E1B00830474 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FB7873112F692E1B00830474 /* ShieldActionExtension */;
+			targetProxy = FB7873192F692E1B00830474 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		BCFG1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		BCFG2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		BCFG3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Tilawa/TilawaDebug.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q45SZL2MJZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Tilawa/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilawa.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		BCFG4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Tilawa/Tilawa.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q45SZL2MJZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Tilawa/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilawa.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		BCFG5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShieldConfigurationExtension/ShieldConfigurationExtensionDebug.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q45SZL2MJZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShieldConfigurationExtension/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilawa.app.ShieldConfigurationExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		BCFG6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q45SZL2MJZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShieldConfigurationExtension/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilawa.app.ShieldConfigurationExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		FB1B34FE2F686D2F00F316C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = TilawaMonitor/TilawaMonitorDebug.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q45SZL2MJZ;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "$(SRCROOT)/TilawaMonitor/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = TilawaMonitor;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilawa.app.TilawaMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FB1B34FF2F686D2F00F316C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = TilawaMonitor/TilawaMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q45SZL2MJZ;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "$(SRCROOT)/TilawaMonitor/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = TilawaMonitor;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilawa.app.TilawaMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FB78731C2F692E1B00830474 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = ShieldActionExtension/ShieldActionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q45SZL2MJZ;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShieldActionExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShieldActionExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilawa.app.ShieldActionExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FB78731D2F692E1B00830474 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = ShieldActionExtension/ShieldActionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q45SZL2MJZ;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShieldActionExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShieldActionExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilawa.app.ShieldActionExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		CONFL0 /* Build configuration list for PBXProject "Tilawa" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BCFG1 /* Debug */,
+				BCFG2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CONFL1 /* Build configuration list for PBXNativeTarget "Tilawa" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BCFG3 /* Debug */,
+				BCFG4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CONFL2 /* Build configuration list for PBXNativeTarget "ShieldConfigurationExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BCFG5 /* Debug */,
+				BCFG6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FB1B35012F686D2F00F316C0 /* Build configuration list for PBXNativeTarget "TilawaMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FB1B34FE2F686D2F00F316C0 /* Debug */,
+				FB1B34FF2F686D2F00F316C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FB78731F2F692E1B00830474 /* Build configuration list for PBXNativeTarget "ShieldActionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FB78731C2F692E1B00830474 /* Debug */,
+				FB78731D2F692E1B00830474 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = PROJ1 /* Project object */;
+}

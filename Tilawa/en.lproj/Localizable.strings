@@ -1,0 +1,74 @@
+/* Common */
+"common.back" = "← Back";
+"common.done" = "Done";
+"common.cancel" = "Cancel";
+"common.reset" = "Reset";
+"common.ok" = "OK";
+
+/* Home */
+"home.guarded_apps" = "Guarded apps";
+"home.manage" = "Manage";
+"home.guarded_apps_hint" = "Guarded apps (tap Manage to add)";
+"home.ayahs_read" = "Ayahs read";
+"home.ayahs" = "Ayahs";
+"home.streak" = "Streak";
+"home.today" = "Today";
+"home.view_gate_screen" = "View gate screen";
+"home.simulator_preview" = "Simulator preview";
+"home.read_to_unlock" = "Read ayah · unlock apps";
+
+/* Gate */
+"gate.surah_format" = "Surah %@";
+"gate.ayahs_read" = "Ayahs read";
+"gate.day_streak" = "Day streak";
+"gate.today" = "Today";
+"gate.reading" = "Reading...";
+"gate.continue_to_app" = "Done · unlock apps";
+
+/* Setup */
+"setup.setup" = "Setup";
+"setup.your_surah" = "Your Surah";
+"setup.your_surah_subtitle" = "Choose the surah you want to read through";
+"setup.choose_surah" = "Choose your surah";
+"setup.search_surah" = "Search surahs...";
+"setup.ayahs_meta" = "%d ayahs · %@";
+"setup.guarded_apps" = "Guarded apps";
+"setup.add_another_app" = "Add another app...";
+"setup.add_app_device_only" = "Add app (device only)";
+"setup.simulator_alert_title" = "Simulator";
+"setup.simulator_alert_message" = "Guarded apps require a real device. Family Controls doesn't work in Simulator.";
+
+/* Settings */
+"settings.settings" = "Settings";
+"settings.language" = "Language";
+"settings.reading" = "Reading";
+"settings.reading_speed" = "Reading speed";
+"settings.reading_speed_subtitle" = "Sets minimum time per chunk";
+"settings.slow" = "Slow";
+"settings.normal" = "Normal";
+"settings.fast" = "Fast";
+"settings.show_transliteration" = "Show transliteration";
+"settings.transliteration_subtitle" = "Latin pronunciation guide below Arabic";
+"settings.guarded_apps" = "Guarded apps";
+"settings.guarded_apps_subtitle" = "Choose which apps require a moment of reading before opening.";
+"settings.add_app" = "Add an app...";
+"settings.choose_apps_to_guard" = "Choose apps to guard";
+"settings.app" = "App";
+"settings.data" = "Data";
+"settings.reset_progress" = "Reset progress";
+"settings.reset_progress_subtitle" = "Clears streak and ayah count";
+"settings.reset_confirm_title" = "Reset all progress?";
+"settings.reset_confirm_message" = "Your streak and ayah count will be cleared. Your surah and guarded apps stay the same.";
+"settings.privacy_policy" = "Privacy Policy";
+"settings.version_format" = "Version %@";
+"settings.about_quran_from" = "Quran text from ";
+"settings.about_uthmanic" = " · Uthmanic Hafs script";
+"settings.about_transliteration_from" = "Transliteration from ";
+"settings.about_made_with" = "Made with care for the Muslim community";
+
+/* Surah card */
+"surah_card.current_surah" = "Current surah";
+"surah_card.change" = "Change";
+"surah_card.progress" = "Progress";
+"surah_card.of_ayahs" = "%d of %d ayahs";
+"surah_card.up_next_ayah" = "Up next — ayah %d";
