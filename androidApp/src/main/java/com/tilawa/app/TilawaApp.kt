@@ -553,15 +553,20 @@ private fun ActionCard(icon: @Composable () -> Unit, title: String, body: String
 @Composable
 private fun GateScreen(vm: MainViewModel) {
     val state = vm.state
+    val isVoluntaryReading = vm.gatePackage == MainViewModel.MANUAL_GATE
     val surah = vm.quran.surah(state.selectedSurahId) ?: return
     val chunk = surah.chunks.getOrNull(state.currentChunkIndex) ?: return
     val verses = chunk.ayahIds.mapNotNull { id -> surah.verses.firstOrNull { it.id == id } }
     val duration = verses.sumOf { it.wordCount }.times(state.readingSpeed.secondsPerWord).roundToInt().coerceAtLeast(3)
     var elapsed by remember(state.selectedSurahId, state.currentChunkIndex) { mutableIntStateOf(0) }
-    val ready = elapsed >= duration
-    BackHandler(enabled = true) { }
-    LaunchedEffect(state.selectedSurahId, state.currentChunkIndex) {
-        while (elapsed < duration) { delay(1_000); elapsed += 1 }
+    val ready = isVoluntaryReading || elapsed >= duration
+    BackHandler(enabled = true) {
+        if (isVoluntaryReading) vm.dismissGate()
+    }
+    LaunchedEffect(state.selectedSurahId, state.currentChunkIndex, isVoluntaryReading) {
+        if (!isVoluntaryReading) {
+            while (elapsed < duration) { delay(1_000); elapsed += 1 }
+        }
     }
 
     Column(Modifier.fillMaxSize().background(ChromeBg).statusBarsPadding().navigationBarsPadding()) {
@@ -582,12 +587,23 @@ private fun GateScreen(vm: MainViewModel) {
         }
         Column(Modifier.fillMaxWidth().background(ChromeBg).padding(horizontal = 22.dp, vertical = 18.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Lock, null, tint = ChromeMuted, modifier = Modifier.size(18.dp))
-                Text(copy(state.language, "  READING MOMENT", "  MOMENT DE LECTURE", "  لحظة قراءة"), color = ChromeMuted, fontSize = 10.sp, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
-                Text("${elapsed.coerceAtMost(duration)} / ${duration}s", color = ChromeMuted, fontSize = 11.sp)
+                Icon(if (isVoluntaryReading) Icons.Default.Book else Icons.Default.Lock, null, tint = ChromeMuted, modifier = Modifier.size(18.dp))
+                Text(
+                    if (isVoluntaryReading) copy(state.language, "  VOLUNTARY READING", "  LECTURE LIBRE", "  قراءة تطوعية")
+                    else copy(state.language, "  READING MOMENT", "  MOMENT DE LECTURE", "  لحظة قراءة"),
+                    color = ChromeMuted,
+                    fontSize = 10.sp,
+                    letterSpacing = 1.5.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                if (!isVoluntaryReading) Text("${elapsed.coerceAtMost(duration)} / ${duration}s", color = ChromeMuted, fontSize = 11.sp)
             }
             Spacer(Modifier.height(12.dp))
-            LinearProgressIndicator(progress = { elapsed.toFloat() / duration }, color = GoldLight, trackColor = Color.White.copy(alpha = .08f), modifier = Modifier.fillMaxWidth().height(3.dp))
+            if (isVoluntaryReading) {
+                HorizontalDivider(color = Gold.copy(alpha = .28f), thickness = 1.dp)
+            } else {
+                LinearProgressIndicator(progress = { elapsed.toFloat() / duration }, color = GoldLight, trackColor = Color.White.copy(alpha = .08f), modifier = Modifier.fillMaxWidth().height(3.dp))
+            }
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = vm::recordReadAndUnlock,
@@ -595,7 +611,17 @@ private fun GateScreen(vm: MainViewModel) {
                 colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink, disabledContainerColor = Color.Transparent, disabledContentColor = Color.White.copy(alpha = .22f)),
                 border = if (ready) null else BorderStroke(1.dp, Color.White.copy(alpha = .08f)),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) { Text(if (ready) copy(state.language, "Continue to app ↗", "Continuer vers l’application ↗", "متابعة إلى التطبيق ↗") else copy(state.language, "Reading…", "Lecture…", "جارٍ القراءة…"), fontFamily = DisplayFont, fontSize = 17.sp) }
+            ) {
+                Text(
+                    when {
+                        isVoluntaryReading -> copy(state.language, "Complete reading", "Terminer la lecture", "إكمال القراءة")
+                        ready -> copy(state.language, "Continue to app ↗", "Continuer vers l’application ↗", "متابعة إلى التطبيق ↗")
+                        else -> copy(state.language, "Reading…", "Lecture…", "جارٍ القراءة…")
+                    },
+                    fontFamily = DisplayFont,
+                    fontSize = 17.sp,
+                )
+            }
             Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Text("${state.totalAyahsRead}  AYAH", color = ChromeMuted, fontSize = 10.sp)
                 Text("${state.streakDays}  STREAK", color = ChromeMuted, fontSize = 10.sp)
