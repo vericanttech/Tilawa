@@ -53,6 +53,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -115,7 +116,7 @@ fun TilawaApp(vm: MainViewModel) = TilawaTheme {
         containerColor = ChromeBg,
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
-            NavigationBar(containerColor = Parchment, modifier = Modifier.navigationBarsPadding()) {
+            NavigationBar(containerColor = ChromeBg, modifier = Modifier.navigationBarsPadding()) {
                 listOf(
                     Triple(Tab.HOME, Icons.Default.Home, copy(vm.state.language, "Home", "Accueil", "الرئيسية")),
                     Triple(Tab.SURAH, Icons.Default.Book, copy(vm.state.language, "Surah", "Sourate", "السورة")),
@@ -126,6 +127,13 @@ fun TilawaApp(vm: MainViewModel) = TilawaTheme {
                         onClick = { selectedTab = tab },
                         icon = { Icon(icon, null) },
                         label = { Text(label, fontFamily = DisplayFont) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Ink,
+                            selectedTextColor = GoldLight,
+                            indicatorColor = Gold,
+                            unselectedIconColor = ChromeText,
+                            unselectedTextColor = ChromeText,
+                        ),
                     )
                 }
             }
@@ -167,7 +175,7 @@ private fun HomeScreen(vm: MainViewModel, openSettings: () -> Unit) {
                 ActionCard(
                     icon = { Icon(Icons.Default.AccessibilityNew, null, tint = Gold) },
                     title = copy(state.language, "Enable app guarding", "Activer la protection", "فعّل حماية التطبيقات"),
-                    body = copy(state.language, "Android requires Accessibility access to notice when a guarded app opens.", "Android nécessite l’accès d’accessibilité pour détecter une application protégée.", "يتطلب أندرويد إذن تسهيلات الاستخدام لاكتشاف فتح تطبيق محمي."),
+                    body = copy(state.language, "Android requires Accessibility access to know when a guarded app opens. Tilawa cannot read screen content and never stores or sends activity data.", "Android nécessite l’accès d’accessibilité pour détecter l’ouverture d’une application protégée. Tilawa ne peut pas lire l’écran et ne stocke ni ne transmet les données d’activité.", "يتطلب أندرويد إذن تسهيلات الاستخدام لمعرفة وقت فتح تطبيق محمي. لا يستطيع تلاوة قراءة محتوى الشاشة ولا يخزن بيانات النشاط أو يرسلها."),
                     button = copy(state.language, "Open settings", "Ouvrir les réglages", "فتح الإعدادات"),
                 ) {
                     openSettings()
@@ -315,7 +323,12 @@ private fun SettingsScreen(vm: MainViewModel) {
                     vm.refreshApps(); showApps = true
                 }
                 HorizontalDivider(color = Gold.copy(alpha = .12f))
-                SettingsButton(Icons.Default.AccessibilityNew, copy(state.language, "Accessibility service", "Service d’accessibilité", "خدمة تسهيلات الاستخدام"), if (serviceEnabled) "Enabled" else "Required") {
+                SettingsButton(
+                    Icons.Default.AccessibilityNew,
+                    copy(state.language, "Accessibility service", "Service d’accessibilité", "خدمة تسهيلات الاستخدام"),
+                    if (serviceEnabled) copy(state.language, "Enabled · no screen content access", "Activé · aucun accès au contenu de l’écran", "مفعّلة · دون وصول إلى محتوى الشاشة")
+                    else copy(state.language, "Required for guarding · no screen content access", "Requis pour la protection · aucun accès au contenu de l’écran", "مطلوبة للحماية · دون وصول إلى محتوى الشاشة"),
+                ) {
                     context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     serviceEnabled = vm.accessibilityEnabled()
                 }
