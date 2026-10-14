@@ -24,6 +24,7 @@ data class Surah(
 enum class Language { ENGLISH, FRENCH, ARABIC }
 enum class ReadingSpeed(val secondsPerWord: Double) { SLOW(.85), NORMAL(.65), FAST(.45) }
 enum class LockDelay(val millis: Long?) {
+    ONE_MINUTE(60_000L),
     FIFTEEN_MINUTES(15 * 60_000L),
     THIRTY_MINUTES(30 * 60_000L),
     SIXTY_MINUTES(60 * 60_000L),
