@@ -1,19 +1,21 @@
 package com.tilawa.app.blocking
 
 import android.accessibilityservice.AccessibilityService
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
+import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.tilawa.app.MainActivity
 
 class AppBlockAccessibilityService : AccessibilityService() {
     private val guard by lazy { AppGuardRepository(this) }
-    private val mainHandler = Handler(Looper.getMainLooper())
     private var lastIntercepted: String? = null
     private var lastInterceptedAt = 0L
-    private var pendingGatePackage: String? = null
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
@@ -31,32 +33,63 @@ class AppBlockAccessibilityService : AccessibilityService() {
         lastIntercepted = packageName
         lastInterceptedAt = now
 
-        Log.i(TAG, "Opening reading gate for $packageName")
-        openGateReliably(packageName)
+        Log.i(TAG, "Guarding $packageName and posting reading notification")
+        sendHomeAndNotify(packageName)
     }
 
     /**
-     * Some Android skins let a guarded app's next Activity win the foreground
-     * race after an accessibility service starts the gate. Sending Home first
-     * backgrounds the whole guarded task, then Tilawa can be brought forward
-     * deterministically without relying on overlay permission.
+     * Android skins such as MIUI do not reliably allow an accessibility service
+     * to open an Activity from the background. We therefore background the
+     * guarded task and let the user open the reading gate from a notification.
      */
-    private fun openGateReliably(packageName: String) {
-        if (pendingGatePackage == packageName) return
-        pendingGatePackage = packageName
+    private fun sendHomeAndNotify(packageName: String) {
         performGlobalAction(GLOBAL_ACTION_HOME)
-        mainHandler.postDelayed({
-            runCatching {
-                startActivity(
-                    Intent(this, MainActivity::class.java)
-                        .putExtra(MainActivity.EXTRA_GATE_PACKAGE, packageName)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
-                )
-            }.onFailure { Log.e(TAG, "Could not open reading gate", it) }
-            mainHandler.postDelayed({
-                if (pendingGatePackage == packageName) pendingGatePackage = null
-            }, 1_500)
-        }, 250)
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        createNotificationChannel(manager)
+
+        val appLabel = runCatching {
+            packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+        }.getOrDefault("your app")
+        val gateIntent = Intent(this, MainActivity::class.java)
+            .putExtra(MainActivity.EXTRA_GATE_PACKAGE, packageName)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        if (!manager.areNotificationsEnabled()) {
+            Log.w(TAG, "Notifications are disabled; falling back to opening the gate directly")
+            runCatching { startActivity(gateIntent) }
+                .onFailure { Log.e(TAG, "Could not open reading gate fallback", it) }
+            return
+        }
+        val contentIntent = PendingIntent.getActivity(
+            this,
+            packageName.hashCode(),
+            gateIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notification = Notification.Builder(this, CHANNEL_ID)
+            .setSmallIcon(com.tilawa.app.R.drawable.ic_notification)
+            .setContentTitle("Read to continue")
+            .setContentText("Read your next ayahs to open $appLabel.")
+            .setContentIntent(contentIntent)
+            .setCategory(Notification.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
+            .build()
+        manager.notify(NOTIFICATION_ID, notification)
+    }
+
+    private fun createNotificationChannel(manager: NotificationManager) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_ID,
+                    "Reading gate",
+                    NotificationManager.IMPORTANCE_HIGH,
+                ).apply {
+                    description = "Shown when a guarded app requires Quran reading"
+                },
+            )
+        }
     }
 
     override fun onServiceConnected() {
@@ -64,12 +97,11 @@ class AppBlockAccessibilityService : AccessibilityService() {
         Log.i(TAG, "Accessibility service connected")
     }
 
-    override fun onDestroy() {
-        mainHandler.removeCallbacksAndMessages(null)
-        super.onDestroy()
-    }
-
     override fun onInterrupt() = Unit
 
-    companion object { private const val TAG = "TilawaGuard" }
+    companion object {
+        private const val TAG = "TilawaGuard"
+        private const val CHANNEL_ID = "tilawa_reading_gate"
+        private const val NOTIFICATION_ID = 4107
+    }
 }
