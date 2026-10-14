@@ -426,7 +426,6 @@ private fun choiceLabel(value: Enum<*>): String = when (value) {
     ReadingSpeed.SLOW -> "Slow"
     ReadingSpeed.NORMAL -> "Normal"
     ReadingSpeed.FAST -> "Fast"
-    LockDelay.ONE_MINUTE -> "1 min test"
     LockDelay.FIFTEEN_MINUTES -> "15 min"
     LockDelay.THIRTY_MINUTES -> "30 min"
     LockDelay.SIXTY_MINUTES -> "60 min"

@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -66,14 +67,31 @@ class AppBlockAccessibilityService : AccessibilityService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val title = "$appLabel is paused"
+        val message = "Tap to read your next ayahs in Tilawa. When you finish, $appLabel will open."
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(com.tilawa.app.R.drawable.ic_notification)
-            .setContentTitle("Read to continue")
-            .setContentText("Read your next ayahs to open $appLabel.")
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(
+                Notification.BigTextStyle()
+                    .setBigContentTitle(title)
+                    .bigText(message)
+                    .setSummaryText("Tilawa · Quran reading gate"),
+            )
             .setContentIntent(contentIntent)
             .setCategory(Notification.CATEGORY_REMINDER)
+            .setColor(0xFFB8860B.toInt())
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)
+            .addAction(
+                Notification.Action.Builder(
+                    Icon.createWithResource(this, com.tilawa.app.R.drawable.ic_notification),
+                    "READ NOW",
+                    contentIntent,
+                ).build(),
+            )
             .build()
         manager.notify(NOTIFICATION_ID, notification)
     }
