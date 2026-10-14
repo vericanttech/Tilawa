@@ -57,6 +57,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun accessibilityEnabled(): Boolean {
         val context = getApplication<Application>()
+        val globallyEnabled = Settings.Secure.getInt(
+            context.contentResolver,
+            Settings.Secure.ACCESSIBILITY_ENABLED,
+            0,
+        ) == 1
+        if (!globallyEnabled) return false
         val expected = ComponentName(context, AppBlockAccessibilityService::class.java).flattenToString()
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
             ?.split(':')
