@@ -1,10 +1,13 @@
 package com.tilawa.app
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +26,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -54,13 +58,17 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +80,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -207,8 +216,8 @@ private fun HomeScreen(vm: MainViewModel, openSettings: () -> Unit) {
                     if (nextVerse != null) {
                         HorizontalDivider(Modifier.padding(vertical = 18.dp), color = Gold.copy(alpha = .2f))
                         Text(copy(state.language, "UP NEXT · AYAH ${nextVerse.id}", "À SUIVRE · AYAH ${nextVerse.id}", "التالي · الآية ${nextVerse.id}"), color = Gold, fontSize = 10.sp, letterSpacing = 1.5.sp)
-                        Text(nextVerse.text, color = Ink, fontFamily = ArabicFont, fontSize = 25.sp, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
-                        if (state.showTransliteration) Text(nextVerse.transliteration, color = InkLight, fontFamily = DisplayFont, fontStyle = FontStyle.Italic, fontSize = 14.sp)
+                        Text(nextVerse.text, color = Ink, fontFamily = ArabicFont, fontSize = 32.sp, lineHeight = 46.sp, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+                        if (state.showTransliteration) Text(nextVerse.transliteration, color = InkLight, fontFamily = DisplayFont, fontStyle = FontStyle.Italic, fontSize = 17.sp, lineHeight = 25.sp)
                     }
                 }
             }
@@ -266,6 +275,8 @@ private fun SurahScreen(vm: MainViewModel, done: () -> Unit) {
             placeholder = { Text(copy(state.language, "Search by name", "Rechercher par nom", "البحث بالاسم")) },
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             singleLine = true,
+            colors = tilawaTextFieldColors(),
+            shape = RoundedCornerShape(10.dp),
             modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
         )
         Spacer(Modifier.height(10.dp))
@@ -427,34 +438,103 @@ private fun choiceLabel(value: Enum<*>): String = when (value) {
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun AppPickerDialog(vm: MainViewModel, dismiss: () -> Unit) {
     var selected by remember { mutableStateOf(vm.appGuard.guardedPackages()) }
-    AlertDialog(
+    var query by remember { mutableStateOf("") }
+    val apps = remember(vm.installedApps, query) {
+        vm.installedApps.filter { it.label.contains(query.trim(), ignoreCase = true) }
+    }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    ModalBottomSheet(
         onDismissRequest = dismiss,
-        title = { Text("Choose apps to guard") },
-        text = {
-            LazyColumn(Modifier.fillMaxHeight(.68f)) {
-                items(vm.installedApps, key = { it.packageName }) { app ->
-                    Row(Modifier.fillMaxWidth().clickable {
-                        val enabled = app.packageName !in selected
-                        vm.toggleGuard(app.packageName, enabled)
-                        selected = vm.appGuard.guardedPackages()
-                    }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(38.dp).clip(CircleShape).background(Gold.copy(alpha = .2f)), contentAlignment = Alignment.Center) {
-                            Text(app.label.take(1).uppercase(), color = Gold)
-                        }
-                        Column(Modifier.padding(start = 11.dp).weight(1f)) {
-                            Text(app.label)
-                            Text(app.packageName, fontSize = 10.sp, color = Color.Gray)
-                        }
-                        Checkbox(app.packageName in selected, null, colors = CheckboxDefaults.colors(checkedColor = Gold))
+        sheetState = sheetState,
+        containerColor = ChromeCard2,
+        contentColor = ChromeText,
+        scrimColor = Color.Black.copy(alpha = .65f),
+        dragHandle = {
+            Box(Modifier.padding(top = 12.dp).size(width = 42.dp, height = 4.dp).clip(CircleShape).background(Gold.copy(alpha = .45f)))
+        },
+    ) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Choose apps to guard", color = ChromeText, fontFamily = DisplayFont, fontSize = 24.sp)
+                    Text("${selected.size} selected", color = ChromeMuted, fontSize = 12.sp)
+                }
+                TextButton(onClick = dismiss) { Text("Done", color = GoldLight) }
+            }
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                placeholder = { Text("Search apps") },
+                singleLine = true,
+                colors = tilawaTextFieldColors(),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
+            )
+            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 560.dp).padding(horizontal = 20.dp, vertical = 12.dp)) {
+                items(apps, key = { it.packageName }) { app ->
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(9.dp)).clickable {
+                            val enabled = app.packageName !in selected
+                            vm.toggleGuard(app.packageName, enabled)
+                            selected = vm.appGuard.guardedPackages()
+                        }.padding(horizontal = 10.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        LauncherIcon(app.packageName, app.label)
+                        Text(app.label, color = ChromeText, fontSize = 16.sp, modifier = Modifier.padding(start = 13.dp).weight(1f))
+                        Checkbox(
+                            checked = app.packageName in selected,
+                            onCheckedChange = null,
+                            colors = CheckboxDefaults.colors(checkedColor = Gold, uncheckedColor = ChromeMuted, checkmarkColor = Ink),
+                        )
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = dismiss) { Text("Done", color = Gold) } },
-    )
+        }
+    }
 }
+
+@Composable
+private fun LauncherIcon(packageName: String, label: String) {
+    val context = LocalContext.current
+    val bitmap = remember(packageName) {
+        runCatching {
+            val drawable = context.packageManager.getApplicationIcon(packageName)
+            val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 96
+            val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 96
+            Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { output ->
+                drawable.setBounds(0, 0, width, height)
+                drawable.draw(Canvas(output))
+            }.asImageBitmap()
+        }.getOrNull()
+    }
+    if (bitmap != null) {
+        Image(bitmap = bitmap, contentDescription = "$label icon", modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)))
+    } else {
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(Gold.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
+            Text(label.take(1).uppercase(), color = Gold)
+        }
+    }
+}
+
+@Composable
+private fun tilawaTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = ChromeText,
+    unfocusedTextColor = ChromeText,
+    focusedContainerColor = ChromeCard,
+    unfocusedContainerColor = ChromeCard,
+    focusedBorderColor = Gold,
+    unfocusedBorderColor = Gold.copy(alpha = .35f),
+    focusedLeadingIconColor = Gold,
+    unfocusedLeadingIconColor = ChromeMuted,
+    focusedPlaceholderColor = ChromeMuted,
+    unfocusedPlaceholderColor = ChromeMuted,
+    cursorColor = Gold,
+)
 
 @Composable
 private fun ActionCard(icon: @Composable () -> Unit, title: String, body: String, button: String, action: () -> Unit) {
@@ -492,9 +572,9 @@ private fun GateScreen(vm: MainViewModel) {
             items(verses, key = { it.id }) { verse ->
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.size(25.dp).border(1.dp, Gold.copy(alpha = .45f), CircleShape), contentAlignment = Alignment.Center) { Text(verse.id.toString(), color = Gold, fontSize = 10.sp) }
-                    Text(verse.text, color = Ink, fontFamily = ArabicFont, fontSize = 32.sp, lineHeight = 51.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                    Text(verse.text, color = Ink, fontFamily = ArabicFont, fontSize = 48.sp, lineHeight = 70.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
                     AnimatedVisibility(state.showTransliteration) {
-                        Text(verse.transliteration, color = InkLight, fontFamily = DisplayFont, fontStyle = FontStyle.Italic, fontSize = 15.sp, lineHeight = 23.sp, textAlign = TextAlign.Center)
+                        Text(verse.transliteration, color = InkLight, fontFamily = DisplayFont, fontStyle = FontStyle.Italic, fontSize = 21.sp, lineHeight = 31.sp, textAlign = TextAlign.Center)
                     }
                     HorizontalDivider(Modifier.padding(vertical = 22.dp), color = Gold.copy(alpha = .2f))
                 }
