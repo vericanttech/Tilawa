@@ -1,6 +1,30 @@
 # Tilawa
 
-A native iOS app that gates access to selected apps behind a Quran reading moment. When you open a guarded app (e.g. Instagram), you first read a chunk of your chosen surah — Arabic + transliteration — and wait for the reading timer. Then the app unlocks. Progress is tracked: streak, total ayahs read, position through the surah.
+A native iOS and Android app that gates access to selected apps behind a Quran reading moment. When you open a guarded app (e.g. Instagram), you first read a chunk of your chosen surah — Arabic + transliteration — and wait for the reading timer. Then the app unlocks. Progress is tracked: streak, total ayahs read, position through the surah.
+
+## Android
+
+The native Kotlin/Jetpack Compose app is in `androidApp/`. It supports Android 8.0 (API 26) and newer.
+
+### Build and run
+
+1. Install Android Studio with Android SDK 35 and JDK 17.
+2. Open the repository root in Android Studio and allow Gradle sync to finish.
+3. Select the `androidApp` run configuration and run it on a device or emulator.
+
+From a terminal:
+
+```bash
+./gradlew :androidApp:assembleDebug
+```
+
+The APK is written to `androidApp/build/outputs/apk/debug/androidApp-debug.apk`.
+
+### Enable app guarding
+
+Android does not provide Apple's Family Controls API. Tilawa uses an opt-in Accessibility Service solely to detect when a selected launcher app becomes active and display the reading gate. In Tilawa, open **Settings → Choose guarded apps**, select apps, then open **Settings → Accessibility service** and enable **Tilawa app guard**. The service does not request window-content access and does not read, store, or transmit screen contents.
+
+The Android port keeps Quran data on-device and shares the iOS project's bundled dataset and fonts. Reading progress and preferences are stored locally with `SharedPreferences`; there is no account, backend, or runtime network dependency.
 
 ## Requirements
 

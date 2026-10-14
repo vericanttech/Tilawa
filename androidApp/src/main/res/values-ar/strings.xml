@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">تلاوة</string>
+    <string name="accessibility_service_label">حماية تطبيقات تلاوة</string>
+    <string name="accessibility_service_description">يكتشف فتح التطبيقات المحمية لعرض بوابة قراءة القرآن. لا يقرأ تطبيق تلاوة محتوى الشاشة ولا يخزنه أو يرسله.</string>
+</resources>

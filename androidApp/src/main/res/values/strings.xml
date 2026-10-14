@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tilawa</string>
+    <string name="accessibility_service_label">Tilawa app guard</string>
+    <string name="accessibility_service_description">Detects when a guarded app opens so Tilawa can show your Quran reading gate. Tilawa does not read, store, or transmit screen content.</string>
+</resources>

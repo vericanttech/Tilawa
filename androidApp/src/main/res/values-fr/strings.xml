@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tilawa</string>
+    <string name="accessibility_service_label">Protection des applications Tilawa</string>
+    <string name="accessibility_service_description">Détecte l’ouverture d’une application protégée afin d’afficher votre lecture du Coran. Tilawa ne lit, ne stocke et ne transmet aucun contenu de l’écran.</string>
+</resources>
