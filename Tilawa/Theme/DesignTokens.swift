@@ -29,7 +29,15 @@ enum DesignTokens {
     static let heat: [Color] = [Color(hex: "#E6EAE8"), Color(hex: "#A8CFC7"), Color(hex: "#5E9F95"), Color(hex: "#1D6B62")]
 
     // MARK: - Fonts
+    /// Warm reading paper for the pause screens: one quiet surface, nothing else.
+    static let paper = Color(hex: "#FAF7F0")
+    static let paperLine = Color(hex: "#EAE4D6")
+
     static func arabic(_ size: CGFloat) -> Font { .custom("Amiri-Regular", size: size) }
+    /// Large, open Arabic for the reading surface.
+    static func readingArabic(_ size: CGFloat) -> Font { .custom("Lateef-Regular", size: size) }
+    static func serif(_ size: CGFloat) -> Font { .custom("CormorantGaramond-Regular", size: size) }
+    static func serifItalic(_ size: CGFloat) -> Font { .custom("CormorantGaramond-Italic", size: size) }
     static let largeTitle = Font.system(size: 30, weight: .bold)
     static let title = Font.system(size: 28, weight: .bold)
     static let headline = Font.system(size: 17, weight: .bold)

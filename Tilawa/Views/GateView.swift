@@ -77,130 +77,99 @@ struct ReadingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            GateHeader(title: "Surah \(surah?.name ?? "")", onClose: onClose) { textMenu }
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 28) {
+                VStack(spacing: 0) {
                     if appState.state.goal == .meaning, verses.contains(where: { $0.translation == nil }) {
                         Text("English meaning isn’t available for this surah yet.")
                             .font(DesignTokens.caption)
                             .foregroundColor(DesignTokens.muted)
+                            .multilineTextAlignment(.center)
+                            .padding(.bottom, 16)
                     }
-                    ForEach(verses) { verse in
+                    ForEach(Array(verses.enumerated()), id: \.element.id) { index, verse in
+                        if index > 0 { VerseDivider() }
                         verseBlock(verse)
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 12)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 28)
+                .padding(.top, 16)
                 .padding(.bottom, 24)
             }
 
-            VStack(spacing: 14) {
-                LineProgress(value: duration > 0 ? Double(elapsed) / Double(duration) : 1)
+            GateBottomBar(label: "Reading moment", detail: isReady ? rangeText : "\(rangeText) · \(timeLeft)") {
+                ThinProgress(value: duration > 0 ? Double(elapsed) / Double(duration) : 1)
                 if isReady {
                     Button("Done reading", action: finish)
                         .buttonStyle(PrimaryButtonStyle())
                 } else {
-                    Text("Take your time · \(timeLeft)")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(DesignTokens.accent)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(RoundedRectangle(cornerRadius: DesignTokens.radiusLg, style: .continuous).fill(DesignTokens.accentTint))
+                    WaitLabel(text: "Reading…")
                         .accessibilityLabel("Keep reading. \(duration - elapsed) seconds left")
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
-            .background(DesignTokens.surface.overlay(Rectangle().fill(DesignTokens.hairline).frame(height: 1), alignment: .top))
         }
-        .background(DesignTokens.surface.ignoresSafeArea())
+        .background(DesignTokens.paper.ignoresSafeArea())
         .onAppear(perform: start)
         .onDisappear { timer?.invalidate(); timer = nil }
     }
 
-    private var header: some View {
-        HStack {
-            CircleIconButton(systemName: "xmark", accessibilityLabel: "Close", background: DesignTokens.surfaceMuted, action: onClose)
-            Spacer()
-            VStack(spacing: 2) {
-                Text(surah?.name ?? "")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(DesignTokens.ink)
-                Text(rangeText)
-                    .font(.system(size: 12))
-                    .foregroundColor(DesignTokens.muted)
-            }
-            Spacer()
-            Menu {
-                Toggle("Meaning first", isOn: Binding(
-                    get: { appState.state.meaningFirst },
-                    set: { appState.state.meaningFirst = $0 }
-                ))
-                Toggle("Show transliteration", isOn: Binding(
-                    get: { appState.state.showTransliteration },
-                    set: { appState.state.showTransliteration = $0 }
-                ))
-            } label: {
-                Text("Aa")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(DesignTokens.ink)
-                    .frame(width: 44, height: 44)
-                    .background(Circle().fill(DesignTokens.surfaceMuted))
-            }
-            .accessibilityLabel("Text settings")
+    private var textMenu: some View {
+        Menu {
+            Toggle("Meaning first", isOn: Binding(
+                get: { appState.state.meaningFirst },
+                set: { appState.state.meaningFirst = $0 }
+            ))
+            Toggle("Show transliteration", isOn: Binding(
+                get: { appState.state.showTransliteration },
+                set: { appState.state.showTransliteration = $0 }
+            ))
+        } label: {
+            Text("Aa")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(DesignTokens.muted)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
+        .accessibilityLabel("Text settings")
     }
 
     @ViewBuilder
     private func verseBlock(_ verse: Verse) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VerseBadge(number: verse.id)
+        VStack(spacing: 14) {
+            VerseMark(number: verse.id)
             if meaningFirst, let translation = verse.translation {
                 TranslationText.make(translation)
-                    .font(.system(size: 20, weight: .medium))
+                    .font(DesignTokens.serif(23))
                     .foregroundColor(DesignTokens.ink)
+                    .lineSpacing(5)
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                arabic(verse, size: 22, color: DesignTokens.mutedStrong)
-                transliteration(verse, size: 13)
+                ReadingArabic(text: verse.text, size: 30, color: DesignTokens.mutedStrong)
+                transliteration(verse, size: 17)
                 FootnotesView(text: verse.footnotes)
             } else {
-                arabic(verse, size: 30, color: DesignTokens.ink)
-                transliteration(verse, size: 14)
+                ReadingArabic(text: verse.text, size: 44, color: DesignTokens.ink)
+                transliteration(verse, size: 20)
                 if let translation = verse.translation {
                     TranslationText.make(translation)
-                        .font(DesignTokens.body)
+                        .font(.system(size: 15))
                         .foregroundColor(DesignTokens.inkSoft)
-                        .lineSpacing(3)
+                        .lineSpacing(4)
+                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                     FootnotesView(text: verse.footnotes)
                 }
             }
         }
-    }
-
-    private func arabic(_ verse: Verse, size: CGFloat, color: Color) -> some View {
-        Text(verse.text)
-            .font(DesignTokens.arabic(size))
-            .foregroundColor(color)
-            .lineSpacing(size * 0.5)
-            .multilineTextAlignment(.trailing)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .environment(\.layoutDirection, .rightToLeft)
-            .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
     private func transliteration(_ verse: Verse, size: CGFloat) -> some View {
         if appState.state.showTransliteration {
-            Text(verse.transliteration)
-                .font(.system(size: size).italic())
-                .foregroundColor(DesignTokens.muted)
-                .fixedSize(horizontal: false, vertical: true)
+            ReadingTransliteration(text: verse.transliteration, size: size)
         }
     }
 
@@ -268,6 +237,147 @@ struct ReadingView: View {
     }
 }
 
+// MARK: - Reading surface pieces
+
+/// Quiet header on the paper: a small letterspaced title, with close and text settings kept faint.
+struct GateHeader<Trailing: View>: View {
+    let title: String
+    let onClose: () -> Void
+    @ViewBuilder let trailing: () -> Trailing
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 17, weight: .regular))
+                    .foregroundColor(DesignTokens.muted)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Close")
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(2)
+                .foregroundColor(DesignTokens.accent)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+            trailing()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+    }
+}
+
+/// The one place to act, set apart from the reading surface by a hairline.
+struct GateBottomBar<Content: View>: View {
+    let label: String
+    let detail: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(spacing: 10) {
+            HStack {
+                Text(label.uppercased())
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(1.5)
+                    .foregroundColor(DesignTokens.muted)
+                Spacer()
+                Text(detail)
+                    .font(.system(size: 12))
+                    .foregroundColor(DesignTokens.muted)
+                    .monospacedDigit()
+            }
+            content()
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
+        .background(DesignTokens.paper.overlay(Rectangle().fill(DesignTokens.paperLine).frame(height: 1), alignment: .top))
+    }
+}
+
+struct ThinProgress: View {
+    let value: Double
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Rectangle().fill(DesignTokens.paperLine)
+                Rectangle().fill(DesignTokens.accent)
+                    .frame(width: geo.size.width * min(max(value, 0), 1))
+                    .animation(.linear(duration: 1), value: value)
+            }
+        }
+        .frame(height: 2)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Calm stand-in for the button while the minimum reading time runs.
+struct WaitLabel: View {
+    let text: String
+    var body: some View {
+        Text(text)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(DesignTokens.accent)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(RoundedRectangle(cornerRadius: DesignTokens.radiusLg, style: .continuous).fill(DesignTokens.accentTint))
+    }
+}
+
+/// Small outlined verse number, centered above the verse.
+struct VerseMark: View {
+    let number: Int
+    var body: some View {
+        Text("\(number)")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(DesignTokens.accent)
+            .frame(width: 28, height: 28)
+            .overlay(Circle().stroke(DesignTokens.accent.opacity(0.45), lineWidth: 1))
+            .accessibilityLabel("Ayah \(number)")
+    }
+}
+
+struct VerseDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(DesignTokens.paperLine)
+            .frame(width: 56, height: 1)
+            .padding(.vertical, 22)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Large centered Arabic for the reading surface.
+struct ReadingArabic: View {
+    let text: String
+    let size: CGFloat
+    let color: Color
+    var body: some View {
+        Text(text)
+            .font(DesignTokens.readingArabic(size))
+            .foregroundColor(color)
+            .lineSpacing(size * 0.35)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .environment(\.layoutDirection, .rightToLeft)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+struct ReadingTransliteration: View {
+    let text: String
+    let size: CGFloat
+    var body: some View {
+        Text(text)
+            .font(DesignTokens.serifItalic(size))
+            .foregroundColor(DesignTokens.muted)
+            .lineSpacing(size * 0.2)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
 // MARK: - Recall (Muraja'ah)
 
 struct RecallView: View {
@@ -287,67 +397,48 @@ struct RecallView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            GateHeader(title: "Muraja’ah · \(surah?.name ?? "")", onClose: onClose) {
+                Color.clear.frame(width: 44, height: 44)
+            }
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(spacing: 20) {
+                    if let verse {
+                        VerseMark(number: verse.id)
+                    }
                     Text(caption)
                         .font(.system(size: 14))
                         .foregroundColor(DesignTokens.muted)
+                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
 
                     if let verse {
                         FadingVerse(words: verse.words, stage: stage, revealed: revealed)
 
                         if stage == 0, appState.state.showTransliteration {
-                            Text(verse.transliteration)
-                                .font(.system(size: 14).italic())
-                                .foregroundColor(DesignTokens.muted)
-                                .fixedSize(horizontal: false, vertical: true)
+                            ReadingTransliteration(text: verse.transliteration, size: 20)
                         }
 
-                        promptBox(verse)
+                        VerseDivider()
+                        meaning(verse)
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 28)
+                .padding(.top, 16)
                 .padding(.bottom, 24)
             }
 
-            VStack(spacing: 10) {
+            GateBottomBar(label: "Review", detail: verse.map { "Ayah \($0.id) of \(surah?.totalVerses ?? 0)" } ?? "") {
                 actions
                 Text("Your app opens either way")
                     .font(.system(size: 12))
                     .foregroundColor(DesignTokens.muted)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
-            .background(DesignTokens.surface.overlay(Rectangle().fill(DesignTokens.hairline).frame(height: 1), alignment: .top))
         }
-        .background(DesignTokens.surface.ignoresSafeArea())
+        .background(DesignTokens.paper.ignoresSafeArea())
         .onAppear(perform: start)
         .onDisappear { timer?.invalidate(); timer = nil }
-    }
-
-    private var header: some View {
-        HStack {
-            CircleIconButton(systemName: "xmark", accessibilityLabel: "Close", background: DesignTokens.surfaceMuted, action: onClose)
-            Spacer()
-            VStack(spacing: 2) {
-                Text("Muraja’ah · \(surah?.name ?? "")")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(DesignTokens.ink)
-                Text(verse.map { "Ayah \($0.id) · review" } ?? "")
-                    .font(.system(size: 12))
-                    .foregroundColor(DesignTokens.muted)
-            }
-            Spacer()
-            Color.clear.frame(width: 44, height: 44)
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
     }
 
     private var caption: String {
@@ -361,25 +452,23 @@ struct RecallView: View {
     }
 
     @ViewBuilder
-    private func promptBox(_ verse: Verse) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Overline(text: stage == 3 && !revealed ? "Recall the verse that means" : "Meaning")
+    private func meaning(_ verse: Verse) -> some View {
+        VStack(spacing: 14) {
+            Overline(text: stage == 3 && !revealed ? "Recall the verse that means" : "Meaning", color: DesignTokens.muted)
             if let translation = verse.translation {
                 TranslationText.make(translation)
-                    .font(DesignTokens.body)
+                    .font(DesignTokens.serif(20))
                     .foregroundColor(DesignTokens.inkSoft)
+                    .lineSpacing(4)
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                 FootnotesView(text: revealed || stage < 3 ? verse.footnotes : nil)
             } else {
                 Text("Ayah \(verse.id) of \(surah?.name ?? "")")
-                    .font(DesignTokens.body)
+                    .font(DesignTokens.serif(20))
                     .foregroundColor(DesignTokens.inkSoft)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: DesignTokens.radiusLg, style: .continuous).fill(DesignTokens.mist))
     }
 
     @ViewBuilder
@@ -395,12 +484,7 @@ struct RecallView: View {
                     .buttonStyle(PrimaryButtonStyle())
             }
         } else if elapsed < minimum {
-            Text("Take your time · \(max(0, minimum - elapsed))s")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(DesignTokens.accent)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(RoundedRectangle(cornerRadius: DesignTokens.radiusLg, style: .continuous).fill(DesignTokens.accentTint))
+            WaitLabel(text: "Take your time · \(max(0, minimum - elapsed))s")
         } else {
             VStack(spacing: 4) {
                 Button("Done") { finish(recalled: !revealed) }
@@ -463,7 +547,7 @@ struct FadingVerse: View {
             ForEach(Array(words.enumerated()), id: \.offset) { index, word in
                 let look = wordStyle(index)
                 Text(word)
-                    .font(DesignTokens.arabic(32))
+                    .font(DesignTokens.readingArabic(42))
                     .foregroundColor(look.color)
                     .padding(.bottom, 2)
                     .overlay(
@@ -529,21 +613,30 @@ struct RightToLeftFlow: Layout {
         return CGSize(width: proposal.width ?? widest, height: totalHeight)
     }
 
+    /// Lines are centered, so a verse sits in the middle of the page like the reading view.
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.maxX
-        var y = bounds.minY
-        var lineHeight: CGFloat = 0
-        for view in subviews {
+        // Group words into lines first, then place each line centered, right to left.
+        var lines: [[(index: Int, size: CGSize)]] = [[]]
+        var lineWidth: CGFloat = 0
+        for (index, view) in subviews.enumerated() {
             let size = view.sizeThatFits(.unspecified)
-            if x < bounds.maxX && x - spacing - size.width < bounds.minX {
-                x = bounds.maxX
-                y += lineHeight + lineSpacing
-                lineHeight = 0
+            if lineWidth > 0 && lineWidth + spacing + size.width > bounds.width {
+                lines.append([])
+                lineWidth = 0
             }
-            if x < bounds.maxX { x -= spacing }
-            view.place(at: CGPoint(x: x - size.width, y: y), proposal: ProposedViewSize(size))
-            x -= size.width
-            lineHeight = max(lineHeight, size.height)
+            lineWidth += (lineWidth > 0 ? spacing : 0) + size.width
+            lines[lines.count - 1].append((index, size))
+        }
+        var y = bounds.minY
+        for line in lines where !line.isEmpty {
+            let width = line.reduce(0) { $0 + $1.size.width } + spacing * CGFloat(line.count - 1)
+            let height = line.map(\.size.height).max() ?? 0
+            var x = bounds.midX + width / 2
+            for item in line {
+                subviews[item.index].place(at: CGPoint(x: x - item.size.width, y: y), proposal: ProposedViewSize(item.size))
+                x -= item.size.width + spacing
+            }
+            y += height + lineSpacing
         }
     }
 }
