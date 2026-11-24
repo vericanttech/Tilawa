@@ -74,6 +74,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.tilawa.app.MainViewModel
 import com.tilawa.app.data.Language
 import com.tilawa.app.data.LockDelay
+import com.tilawa.app.data.ReadIn
 import com.tilawa.app.data.ReadingGoal
 import com.tilawa.app.data.ReadingSpeed
 import com.tilawa.app.data.Stats
@@ -209,8 +210,10 @@ private fun NowCard(vm: MainViewModel, surah: Surah) {
                 ) {
                     Text("Up next · ayah ${next.id}", color = T.Muted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     val translation = next.translation
-                    if ((state.meaningFirst || goal == ReadingGoal.MEANING) && translation != null) {
+                    if (state.readIn == ReadIn.ENGLISH && translation != null) {
                         Text(translationText(translation), color = T.InkSoft, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    } else if (state.readIn == ReadIn.TRANSLITERATION) {
+                        Text(next.transliteration, color = T.InkSoft, fontFamily = SerifFont, fontSize = 19.sp, lineHeight = 26.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     } else {
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                             Text(
@@ -482,9 +485,30 @@ fun SettingsScreen(vm: MainViewModel) {
 
         SectionLabel("Reading")
         Card(padding = 0.dp, radius = 20.dp) {
-            ToggleRow("Meaning first", "Show the English meaning large, with the Arabic below.", state.meaningFirst) { v -> vm.update { it.copy(meaningFirst = v) } }
-            Hairline()
-            ToggleRow("Show transliteration", "Latin letters under the Arabic.", state.showTransliteration) { v -> vm.update { it.copy(showTransliteration = v) } }
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Read in", color = T.Ink, fontSize = 16.sp)
+                Text(
+                    when (state.readIn) {
+                        ReadIn.ARABIC -> "The Arabic is shown large."
+                        ReadIn.TRANSLITERATION -> "For when you can’t read the Arabic script yet: Latin letters are shown large."
+                        ReadIn.ENGLISH -> "The English meaning is shown large."
+                    },
+                    color = T.Muted, fontSize = 13.sp, lineHeight = 18.sp,
+                )
+                Segmented(ReadIn.entries.map { it to it.label }, state.readIn) { v -> vm.update { it.copy(readIn = v) } }
+            }
+            if (state.readIn != ReadIn.ARABIC) {
+                Hairline()
+                ToggleRow("Show Arabic", "The verse in Arabic script, smaller.", state.showArabic) { v -> vm.update { it.copy(showArabic = v) } }
+            }
+            if (state.readIn != ReadIn.TRANSLITERATION) {
+                Hairline()
+                ToggleRow("Show transliteration", "How it sounds, in Latin letters.", state.showTransliteration) { v -> vm.update { it.copy(showTransliteration = v) } }
+            }
+            if (state.readIn != ReadIn.ENGLISH) {
+                Hairline()
+                ToggleRow("Show meaning", "The English translation.", state.showMeaning) { v -> vm.update { it.copy(showMeaning = v) } }
+            }
             Hairline()
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Pause length", color = T.Ink, fontSize = 16.sp)

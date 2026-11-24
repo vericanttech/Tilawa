@@ -14,6 +14,7 @@ import com.tilawa.app.data.AppState
 import com.tilawa.app.data.DoneInfo
 import com.tilawa.app.data.GuardedApp
 import com.tilawa.app.data.QuranRepository
+import com.tilawa.app.data.ReadIn
 import com.tilawa.app.data.ReadingGoal
 import com.tilawa.app.data.StateStore
 import com.tilawa.app.data.Stats
@@ -49,7 +50,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun completeOnboarding() = update { it.copy(hasCompletedOnboarding = true, isFirstLaunch = false) }
-    fun setGoal(goal: ReadingGoal) = update { it.copy(goal = goal, meaningFirst = goal == ReadingGoal.MEANING) }
+    /** Read with meaning starts in English; leaving it goes back to Arabic. A reader who picked transliteration keeps it. */
+    fun setGoal(goal: ReadingGoal) = update {
+        val readIn = when {
+            goal == ReadingGoal.MEANING -> ReadIn.ENGLISH
+            it.readIn == ReadIn.ENGLISH -> ReadIn.ARABIC
+            else -> it.readIn
+        }
+        it.copy(goal = goal, readIn = readIn)
+    }
 
     fun selectSurah(id: Int) {
         if (id == state.selectedSurahId) return

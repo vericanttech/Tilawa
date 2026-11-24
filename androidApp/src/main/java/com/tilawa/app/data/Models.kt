@@ -13,6 +13,8 @@ data class Verse(
 ) {
     /** Arabic words, used by the fading muraja'ah view. */
     val words: List<String> get() = text.split(' ').filter { it.isNotBlank() }
+    /** Transliteration words, for muraja'ah by people who don't read the Arabic script. */
+    val transliterationWords: List<String> get() = transliteration.split(' ').filter { it.isNotBlank() }
 }
 
 data class Chunk(val ayahIds: List<Int>, val durationSeconds: Int)
@@ -68,6 +70,16 @@ enum class ReadingGoal(
     ),
 }
 
+/** Which text a person reads: it's shown large, the others smaller underneath. */
+enum class ReadIn(val label: String, val short: String) {
+    /** Reads the Arabic script. */
+    ARABIC("Arabic", "Arabic"),
+    /** Can't read the script, sounds it out in Latin letters. */
+    TRANSLITERATION("Transliteration", "Latin"),
+    /** Reads for the meaning. */
+    ENGLISH("English", "English"),
+}
+
 /** Muraja'ah progress for one verse. Stage 0 = full text, 1 = some words faded, 2 = first word only, 3 = from memory. */
 data class ReviewItem(
     val stage: Int = 0,
@@ -88,10 +100,14 @@ data class AppState(
     val isFirstLaunch: Boolean = true,
     val hasCompletedOnboarding: Boolean = false,
     val goal: ReadingGoal = ReadingGoal.FAMILIAR,
-    val meaningFirst: Boolean = false,
+    /** The main, large text on the reading screen. */
+    val readIn: ReadIn = ReadIn.ARABIC,
     val language: Language = Language.ENGLISH,
     val readingSpeed: ReadingSpeed = ReadingSpeed.NORMAL,
+    /** Secondary lines under the main text (the one matching [readIn] is always shown). */
+    val showArabic: Boolean = true,
     val showTransliteration: Boolean = true,
+    val showMeaning: Boolean = true,
     val lockDelay: LockDelay = LockDelay.FIFTEEN_MINUTES,
     val timesThroughSurah: Int = 0,
     val surahsCompleted: Int = 0,

@@ -23,7 +23,10 @@ class StateStore(context: Context) {
             // People who used the old version skip onboarding.
             hasCompletedOnboarding = prefs.getBoolean("hasCompletedOnboarding", !isFirstLaunch),
             goal = prefs.enum("goal", ReadingGoal.FAMILIAR),
-            meaningFirst = prefs.getBoolean("meaningFirst", false),
+            // Older versions had a "meaning first" switch.
+            readIn = prefs.enum("readIn", if (prefs.getBoolean("meaningFirst", false)) ReadIn.ENGLISH else ReadIn.ARABIC),
+            showArabic = prefs.getBoolean("showArabic", true),
+            showMeaning = prefs.getBoolean("showMeaning", true),
             language = prefs.enum("language", Language.ENGLISH),
             readingSpeed = prefs.enum("readingSpeed", ReadingSpeed.NORMAL),
             showTransliteration = prefs.getBoolean("showTransliteration", true),
@@ -48,7 +51,9 @@ class StateStore(context: Context) {
             .putBoolean("isFirstLaunch", state.isFirstLaunch)
             .putBoolean("hasCompletedOnboarding", state.hasCompletedOnboarding)
             .putString("goal", state.goal.name)
-            .putBoolean("meaningFirst", state.meaningFirst)
+            .putString("readIn", state.readIn.name)
+            .putBoolean("showArabic", state.showArabic)
+            .putBoolean("showMeaning", state.showMeaning)
             .putString("language", state.language.name)
             .putString("readingSpeed", state.readingSpeed.name)
             .putBoolean("showTransliteration", state.showTransliteration)

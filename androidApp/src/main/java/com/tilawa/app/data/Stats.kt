@@ -45,10 +45,16 @@ object Stats {
         return surah.verses.minByOrNull { items[it.id]?.dueAt ?: now }
     }
 
-    fun reviewStage(verseId: Int, state: AppState): Int = state.reviewItems[verseId]?.stage ?: 0
+    /**
+     * Muraja'ah is for a surah you've memorized, so a verse you haven't reviewed yet starts with
+     * some words faded. The full verse (stage 0) only comes back after a miss.
+     */
+    const val NEW_VERSE_STAGE = 1
+
+    fun reviewStage(verseId: Int, state: AppState): Int = state.reviewItems[verseId]?.stage ?: NEW_VERSE_STAGE
 
     fun recordReview(state: AppState, verseId: Int, recalled: Boolean, now: Long = System.currentTimeMillis()): AppState {
-        val old = state.reviewItems[verseId] ?: ReviewItem()
+        val old = state.reviewItems[verseId] ?: ReviewItem(stage = NEW_VERSE_STAGE)
         val times = old.timesReviewed + 1
         val item = if (recalled) {
             val stage = (old.stage + 1).coerceAtMost(3)
