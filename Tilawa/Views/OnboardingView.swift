@@ -2,7 +2,7 @@ import FamilyControls
 import ManagedSettings
 import SwiftUI
 
-/// First launch: Welcome → What brings you here → Choose apps → Choose a surah.
+/// First launch: Welcome → What brings you here → How you read → Choose apps → Choose a surah.
 struct OnboardingView: View {
     @ObservedObject var appState: AppStateStore
     @ObservedObject var shield: ShieldService
@@ -20,7 +20,8 @@ struct OnboardingView: View {
             switch step {
             case 0: welcome
             case 1: goalStep
-            case 2: appsStep
+            case 2: readInStep
+            case 3: appsStep
             default: surahStep
             }
         }
@@ -174,12 +175,98 @@ struct OnboardingView: View {
         .accessibilityAddTraits(on ? [.isSelected] : [])
     }
 
-    // MARK: - 3 · Choose apps
+    // MARK: - 3 · How you read
 
-    private var appsStep: some View {
+    /// Which text the person can read: it becomes the large text at every pause.
+    private var readInStep: some View {
         stepScaffold(
             current: 2,
             back: { step = 1 },
+            title: "How do you read the Quran?",
+            subtitle: "We’ll show that large at each pause. You can change it anytime with Aa.",
+            continueAction: { step = 3 }
+        ) {
+            VStack(spacing: 12) {
+                ForEach(ReadIn.allCases) { option in
+                    readInCard(option)
+                }
+            }
+        }
+    }
+
+    private func readInCard(_ option: ReadIn) -> some View {
+        let on = appState.state.readIn == option
+        // A real first verse, so people can tell which one they can read.
+        let sample = quran.surah(id: 1)?.verses.first
+        let (title, detail): (String, String) = {
+            switch option {
+            case .arabic: return ("I read Arabic", "The Arabic is shown large.")
+            case .transliteration: return ("I sound it out in Latin letters", "For when you can’t read the Arabic script yet.")
+            case .english: return ("I read for the meaning", "The English meaning is shown large.")
+            }
+        }()
+        return Button {
+            appState.state.readIn = option
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(title)
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(DesignTokens.ink)
+                        Text(detail)
+                            .font(.system(size: 14))
+                            .foregroundColor(DesignTokens.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 22))
+                        .foregroundColor(on ? DesignTokens.accent : DesignTokens.outline)
+                }
+                if let sample {
+                    Group {
+                        switch option {
+                        case .arabic:
+                            Text(sample.text)
+                                .font(DesignTokens.readingArabic(30))
+                                .environment(\.layoutDirection, .rightToLeft)
+                        case .transliteration:
+                            Text(sample.transliteration)
+                                .font(DesignTokens.serif(22))
+                        case .english:
+                            // Only the licensed translation text, never a paraphrase.
+                            if let translation = sample.translation {
+                                TranslationText.make(translation)
+                                    .font(DesignTokens.serif(19))
+                            }
+                        }
+                    }
+                    .foregroundColor(DesignTokens.ink)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DesignTokens.paper))
+                }
+            }
+            .padding(16)
+            .background(RoundedRectangle(cornerRadius: DesignTokens.radiusXl, style: .continuous).fill(DesignTokens.surface))
+            .overlay(RoundedRectangle(cornerRadius: DesignTokens.radiusXl, style: .continuous)
+                .stroke(on ? DesignTokens.accent : Color.clear, lineWidth: 2))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? [.isSelected] : [])
+    }
+
+    // MARK: - 4 · Choose apps
+
+    private var appsStep: some View {
+        stepScaffold(
+            current: 3,
+            back: { step = 2 },
             title: "Which apps pull you in?",
             subtitle: "Each time you open one, you’ll spend a few seconds with the Quran first. You can change them anytime.",
             continueAction: {
@@ -188,7 +275,7 @@ struct OnboardingView: View {
                     shield.startFullDayMonitoring()
                     shield.skipGateAfterAddingApps = true
                 }
-                step = 3
+                step = 4
             }
         ) {
             VStack(alignment: .leading, spacing: 16) {
@@ -263,12 +350,12 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - 4 · Choose a surah
+    // MARK: - 5 · Choose a surah
 
     private var surahStep: some View {
         stepScaffold(
-            current: 3,
-            back: { step = 2 },
+            current: 4,
+            back: { step = 3 },
             title: surahTitle,
             subtitle: surahSubtitle,
             continueTitle: "Start",
@@ -358,6 +445,8 @@ struct OnboardingView: View {
 
     // MARK: - Shared step layout
 
+    private static let stepCount = 4
+
     private func stepScaffold<Content: View>(
         current: Int,
         back: @escaping () -> Void,
@@ -371,7 +460,7 @@ struct OnboardingView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
                     CircleIconButton(systemName: "chevron.left", accessibilityLabel: "Back", action: back)
-                    StepBars(current: current, total: 3)
+                    StepBars(current: current, total: Self.stepCount)
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 12)
@@ -379,7 +468,7 @@ struct OnboardingView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 22) {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Step \(current) of 3")
+                            Text("Step \(current) of \(Self.stepCount)")
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(DesignTokens.accent)
                             Text(title)
