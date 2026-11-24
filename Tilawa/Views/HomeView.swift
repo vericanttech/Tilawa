@@ -161,9 +161,14 @@ struct HomeView: View {
                 Text("Up next · ayah \(verse.id)")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(DesignTokens.muted)
-                if (s.meaningFirst || s.goal == .meaning), let translation = verse.translation {
+                if s.readIn == .english, let translation = verse.translation {
                     TranslationText.make(translation)
                         .font(DesignTokens.callout)
+                        .foregroundColor(DesignTokens.inkSoft)
+                        .lineLimit(2)
+                } else if s.readIn == .transliteration {
+                    Text(verse.transliteration)
+                        .font(DesignTokens.serif(19))
                         .foregroundColor(DesignTokens.inkSoft)
                         .lineLimit(2)
                 } else {

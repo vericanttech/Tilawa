@@ -81,6 +81,29 @@ enum ReadingGoal: String, Codable, CaseIterable, Identifiable {
     var actionTitle: String { self == .review ? "Review now" : "Read now" }
 }
 
+/// Which text a person reads: it's shown large, the others smaller underneath.
+enum ReadIn: String, Codable, CaseIterable, Identifiable {
+    /// Reads the Arabic script.
+    case arabic
+    /// Can't read the script, sounds it out in Latin letters.
+    case transliteration
+    /// Reads for the meaning.
+    case english
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .arabic: return "Arabic"
+        case .transliteration: return "Transliteration"
+        case .english: return "English"
+        }
+    }
+
+    /// Fits a three-way picker in a small card.
+    var shortLabel: String { self == .transliteration ? "Latin" : label }
+}
+
 /// Memory state of one verse in muraja'ah mode (a simple Leitner box).
 struct ReviewItem: Codable, Equatable {
     /// 0 = full text, 1 = fading, 2 = first word only, 3 = full recall.
@@ -105,12 +128,15 @@ struct AppState: Codable {
     var language: Language = .english
     var readingSpeed: ReadingSpeed = .normal
     var showTransliteration: Bool = true
+    /// Secondary lines under the main text (the one matching `readIn` is always shown).
+    var showArabic: Bool = true
+    var showMeaning: Bool = true
 
     // Redesign additions
     var hasCompletedOnboarding: Bool = false
     var goal: ReadingGoal = .familiar
-    /// When true, the English meaning is shown above the Arabic.
-    var meaningFirst: Bool = false
+    /// The main, large text on the reading screen.
+    var readIn: ReadIn = .arabic
     /// Completed passes through the selected surah (familiar / meaning goals).
     var timesThroughSurah: Int = 0
     var surahsCompleted: Int = 0
@@ -126,9 +152,13 @@ struct AppState: Codable {
     private enum CodingKeys: String, CodingKey {
         case selectedSurahId, currentChunkIndex, totalAyahsRead, todayAyahsRead, lastReadDate,
              streakDays, longestStreak, isFirstLaunch, language, readingSpeed, showTransliteration,
-             hasCompletedOnboarding, goal, meaningFirst, timesThroughSurah, surahsCompleted,
+             hasCompletedOnboarding, goal, readIn, showArabic, showMeaning,
+             timesThroughSurah, surahsCompleted,
              reviewItems, totalReviews, dailyAyahs
     }
+
+    /// Keys only read from older saved state.
+    private enum LegacyKeys: String, CodingKey { case meaningFirst }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -147,7 +177,12 @@ struct AppState: Codable {
         // Existing users (who already used the old app) skip onboarding.
         hasCompletedOnboarding = try c.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? !isFirstLaunch
         goal = try c.decodeIfPresent(ReadingGoal.self, forKey: .goal) ?? d.goal
-        meaningFirst = try c.decodeIfPresent(Bool.self, forKey: .meaningFirst) ?? (goal == .meaning)
+        // Older versions had a "meaning first" switch instead.
+        let legacy = try decoder.container(keyedBy: LegacyKeys.self)
+        let meaningFirst = try legacy.decodeIfPresent(Bool.self, forKey: .meaningFirst) ?? (goal == .meaning)
+        readIn = try c.decodeIfPresent(ReadIn.self, forKey: .readIn) ?? (meaningFirst ? .english : .arabic)
+        showArabic = try c.decodeIfPresent(Bool.self, forKey: .showArabic) ?? true
+        showMeaning = try c.decodeIfPresent(Bool.self, forKey: .showMeaning) ?? true
         timesThroughSurah = try c.decodeIfPresent(Int.self, forKey: .timesThroughSurah) ?? 0
         surahsCompleted = try c.decodeIfPresent(Int.self, forKey: .surahsCompleted) ?? 0
         reviewItems = try c.decodeIfPresent([Int: ReviewItem].self, forKey: .reviewItems) ?? [:]

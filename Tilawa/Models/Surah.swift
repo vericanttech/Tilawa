@@ -38,6 +38,11 @@ struct Verse: Codable, Identifiable {
     var words: [String] {
         text.split(separator: " ").map(String.init)
     }
+
+    /// Transliteration words, for muraja'ah by people who don't read the Arabic script.
+    var transliterationWords: [String] {
+        transliteration.split(separator: " ").map(String.init)
+    }
 }
 
 struct Chunk: Codable {

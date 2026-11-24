@@ -173,11 +173,9 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 goalRow
                 Rectangle().fill(DesignTokens.cardBorder).frame(height: 1)
-                meaningFirstRow
+                readInRows
                 Rectangle().fill(DesignTokens.cardBorder).frame(height: 1)
                 readingSpeedRow
-                Rectangle().fill(DesignTokens.cardBorder).frame(height: 1)
-                transliterationRow
             }
             .background(DesignTokens.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusLg))
@@ -223,16 +221,54 @@ struct SettingsView: View {
         .padding(DesignTokens.spacingL)
     }
 
-    private var meaningFirstRow: some View {
-        Toggle(isOn: Binding(
-            get: { appState.state.meaningFirst },
-            set: { appState.state.meaningFirst = $0 }
-        )) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Meaning first")
+    /// Which text is shown large, and which others go underneath.
+    private var readInRows: some View {
+        let readIn = appState.state.readIn
+        return VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Read in")
                     .font(.system(size: 17))
                     .foregroundColor(DesignTokens.primaryText)
-                Text("Show the English meaning large, with the Arabic below.")
+                Text(readInSummary(readIn))
+                    .font(.system(size: 13))
+                    .foregroundColor(DesignTokens.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                ReadInPicker(selection: Binding(get: { appState.state.readIn }, set: { appState.state.readIn = $0 }), long: true)
+            }
+            .padding(DesignTokens.spacingL)
+            if readIn != .arabic {
+                Rectangle().fill(DesignTokens.cardBorder).frame(height: 1)
+                settingToggle("Show Arabic", "The verse in Arabic script, smaller.",
+                              Binding(get: { appState.state.showArabic }, set: { appState.state.showArabic = $0 }))
+            }
+            if readIn != .transliteration {
+                Rectangle().fill(DesignTokens.cardBorder).frame(height: 1)
+                settingToggle("Show transliteration", "How it sounds, in Latin letters.",
+                              Binding(get: { appState.state.showTransliteration }, set: { appState.state.showTransliteration = $0 }))
+            }
+            if readIn != .english {
+                Rectangle().fill(DesignTokens.cardBorder).frame(height: 1)
+                settingToggle("Show meaning", "The English translation.",
+                              Binding(get: { appState.state.showMeaning }, set: { appState.state.showMeaning = $0 }))
+            }
+        }
+    }
+
+    private func readInSummary(_ readIn: ReadIn) -> String {
+        switch readIn {
+        case .arabic: return "The Arabic is shown large."
+        case .transliteration: return "For when you can’t read the Arabic script yet: Latin letters are shown large."
+        case .english: return "The English meaning is shown large."
+        }
+    }
+
+    private func settingToggle(_ title: String, _ detail: String, _ isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 17))
+                    .foregroundColor(DesignTokens.primaryText)
+                Text(detail)
                     .font(.system(size: 13))
                     .foregroundColor(DesignTokens.secondaryText)
             }
@@ -317,33 +353,6 @@ struct SettingsView: View {
                 Text(Localization.L("settings.fast", lang)).tag(ReadingSpeed.fast)
             }
             .pickerStyle(.segmented)
-        }
-        .padding(DesignTokens.spacingL)
-    }
-
-    private var transliterationRow: some View {
-        HStack(spacing: DesignTokens.spacingM) {
-            Text("أ")
-                .font(DesignTokens.arabic(22))
-                .foregroundColor(DesignTokens.ink)
-                .frame(width: 36, height: 36)
-                .background(DesignTokens.gold.opacity(0.25))
-                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusMd))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(Localization.L("settings.show_transliteration", lang))
-                    .font(.system(size: 17))
-                    .foregroundColor(DesignTokens.primaryText)
-                Text(Localization.L("settings.transliteration_subtitle", lang))
-                    .font(Font.system(size: 13))
-                    .foregroundColor(DesignTokens.secondaryText)
-            }
-            Spacer()
-            Toggle("", isOn: Binding(
-                get: { appState.state.showTransliteration },
-                set: { appState.state.showTransliteration = $0 }
-            ))
-            .labelsHidden()
-            .tint(DesignTokens.gold)
         }
         .padding(DesignTokens.spacingL)
     }

@@ -36,7 +36,13 @@ final class AppStateStore: ObservableObject {
 
     func setGoal(_ goal: ReadingGoal) {
         state.goal = goal
-        state.meaningFirst = (goal == .meaning)
+        // Read with meaning starts in English; leaving it goes back to Arabic.
+        // Someone who reads in transliteration keeps it.
+        if goal == .meaning {
+            state.readIn = .english
+        } else if state.readIn == .english {
+            state.readIn = .arabic
+        }
     }
 
     func completeOnboarding() {

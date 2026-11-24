@@ -55,13 +55,17 @@ final class StatsService {
         return surah.verses.min { (items[$0.id]?.dueAt ?? now) < (items[$1.id]?.dueAt ?? now) }
     }
 
+    /// Muraja'ah is for a surah you've memorized, so a verse you haven't reviewed yet starts with
+    /// some words faded. The full verse (stage 0) only comes back after a miss.
+    static let newVerseStage = 1
+
     func reviewStage(for verseId: Int, state: AppState) -> Int {
-        state.reviewItems[verseId]?.stage ?? 0
+        state.reviewItems[verseId]?.stage ?? Self.newVerseStage
     }
 
     /// Records one muraja'ah pause. `recalled` is false when the person asked to see it again soon.
     func recordReview(verseId: Int, recalled: Bool, state: inout AppState, now: Date = Date()) {
-        var item = state.reviewItems[verseId] ?? ReviewItem()
+        var item = state.reviewItems[verseId] ?? ReviewItem(stage: Self.newVerseStage)
         item.timesReviewed += 1
         if recalled {
             let wasStage = item.stage
