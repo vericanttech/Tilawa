@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -75,27 +76,56 @@ fun GateScreen(vm: MainViewModel) {
     }
 }
 
+/** Quiet header on the paper: a small letterspaced title, with close and text settings kept faint. */
 @Composable
-private fun GateHeader(title: String, subtitle: String, onClose: (() -> Unit)?, trailing: @Composable () -> Unit = { Spacer(Modifier.size(44.dp)) }) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (onClose != null) CircleIconButton(Icons.Default.Close, "Close", onClick = onClose) else Spacer(Modifier.size(44.dp))
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, color = T.Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = T.Muted, fontSize = 12.sp)
+private fun GateHeader(title: String, onClose: (() -> Unit)?, trailing: @Composable () -> Unit = { Spacer(Modifier.size(44.dp)) }) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (onClose != null) {
+            QuietIcon("Close", onClose) { Icon(Icons.Default.Close, null, tint = T.Muted, modifier = Modifier.size(20.dp)) }
+        } else {
+            Spacer(Modifier.size(44.dp))
         }
+        Text(
+            title.uppercase(),
+            color = T.Accent,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 2.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f),
+        )
         trailing()
     }
 }
 
 @Composable
-private fun BottomBar(content: @Composable () -> Unit) {
+private fun QuietIcon(description: String, onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        Modifier.size(44.dp).clip(CircleShape)
+            .clickable(onClickLabel = description, onClick = onClick)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) { content() }
+}
+
+/** The one place to act, set apart from the reading surface by a hairline. */
+@Composable
+private fun BottomBar(label: String? = null, trailingLabel: String? = null, content: @Composable () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().background(T.Surface)
-            .drawBehind { drawLine(T.Hairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
-            .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 12.dp),
+        Modifier.fillMaxWidth().background(T.Paper)
+            .drawBehind { drawLine(T.PaperLine, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
+            .padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-    ) { content() }
+    ) {
+        if (label != null) {
+            Row(Modifier.fillMaxWidth()) {
+                Text(label.uppercase(), color = T.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
+                if (trailingLabel != null) Text(trailingLabel, color = T.Muted, fontSize = 12.sp)
+            }
+        }
+        content()
+    }
 }
 
 @Composable
@@ -104,13 +134,29 @@ private fun ArabicText(text: String, size: Int, color: Color, modifier: Modifier
         Text(
             text,
             color = color,
-            fontFamily = ArabicFont,
+            fontFamily = ReadingArabicFont,
             fontSize = size.sp,
-            lineHeight = (size * 1.75).sp,
-            textAlign = TextAlign.Start,
+            lineHeight = (size * 1.45).sp,
+            textAlign = TextAlign.Center,
             modifier = modifier.fillMaxWidth(),
         )
     }
+}
+
+/** Small outlined verse number, centered above the verse. */
+@Composable
+private fun VerseMark(number: Int) {
+    Box(
+        Modifier.size(28.dp)
+            .drawBehind { drawCircle(T.Accent.copy(alpha = 0.45f), radius = size.minDimension / 2 - 0.5.dp.toPx(), style = Stroke(1.dp.toPx())) }
+            .semantics { contentDescription = "Ayah $number" },
+        contentAlignment = Alignment.Center,
+    ) { Text(number.toString(), color = T.Accent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) }
+}
+
+@Composable
+private fun VerseDivider() {
+    Box(Modifier.padding(vertical = 22.dp).width(56.dp).height(1.dp).background(T.PaperLine))
 }
 
 // MARK: Reading
@@ -136,15 +182,12 @@ private fun ReadingScreen(vm: MainViewModel) {
         else -> "Ayahs ${verses.first().id}–${verses.last().id} of ${surah.totalVerses}"
     }
 
-    Column(Modifier.fillMaxSize().background(T.Surface).statusBarsPadding().navigationBarsPadding()) {
-        GateHeader(surah.name, range, if (canClose) vm::dismissGate else null) {
+    Column(Modifier.fillMaxSize().background(T.Paper).statusBarsPadding().navigationBarsPadding()) {
+        GateHeader("Surah ${surah.name}", if (canClose) vm::dismissGate else null) {
             Box {
-                Box(
-                    Modifier.size(44.dp).clip(CircleShape).background(T.SurfaceMuted)
-                        .clickable(onClickLabel = "Text settings") { menu = true }
-                        .semantics { contentDescription = "Text settings" },
-                    contentAlignment = Alignment.Center,
-                ) { Text("Aa", color = T.Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+                QuietIcon("Text settings", { menu = true }) {
+                    Text("Aa", color = T.Muted, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     MenuToggle("Meaning first", state.meaningFirst) { v -> vm.update { it.copy(meaningFirst = v) } }
                     MenuToggle("Show transliteration", state.showTransliteration) { v -> vm.update { it.copy(showTransliteration = v) } }
@@ -153,48 +196,61 @@ private fun ReadingScreen(vm: MainViewModel) {
         }
 
         Column(
-            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(28.dp),
+            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (state.goal == ReadingGoal.MEANING && verses.any { it.translation == null }) {
-                Text("English meaning isn’t available for this surah yet.", color = T.Muted, fontSize = 13.sp)
+                Text("English meaning isn’t available for this surah yet.", color = T.Muted, fontSize = 13.sp, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(16.dp))
             }
-            verses.forEach { verse ->
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    VerseBadge(verse.id)
+            verses.forEachIndexed { index, verse ->
+                if (index > 0) VerseDivider()
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    VerseMark(verse.id)
                     val translation = verse.translation
                     if (meaningFirst && translation != null) {
-                        Text(translationText(translation), color = T.Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, lineHeight = 28.sp)
-                        ArabicText(verse.text, 22, T.MutedStrong)
-                        if (state.showTransliteration) Translit(verse.transliteration, 13)
+                        Text(translationText(translation), color = T.Ink, fontFamily = SerifFont, fontSize = 23.sp, lineHeight = 32.sp, textAlign = TextAlign.Center)
+                        ArabicText(verse.text, 30, T.MutedStrong)
+                        if (state.showTransliteration) Translit(verse.transliteration, 17)
                         Footnotes(verse.footnotes)
                     } else {
-                        ArabicText(verse.text, 30, T.Ink)
-                        if (state.showTransliteration) Translit(verse.transliteration, 14)
+                        ArabicText(verse.text, 44, T.Ink)
+                        if (state.showTransliteration) Translit(verse.transliteration, 20)
                         if (translation != null) {
-                            Text(translationText(translation), color = T.InkSoft, fontSize = 16.sp, lineHeight = 23.sp)
+                            Text(translationText(translation), color = T.InkSoft, fontSize = 15.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
                             Footnotes(verse.footnotes)
                         }
                     }
                 }
             }
+            Spacer(Modifier.height(8.dp))
         }
 
-        BottomBar {
-            LineProgress(if (duration > 0) elapsed.toFloat() / duration else 1f)
+        val left = (duration - elapsed).coerceAtLeast(0)
+        BottomBar(
+            label = if (canClose) "Reading" else "Reading moment",
+            trailingLabel = if (ready) range else "$range · %d:%02d".format(left / 60, left % 60),
+        ) {
+            ThinProgress(if (duration > 0) elapsed.toFloat() / duration else 1f)
             if (ready) {
                 PrimaryButton("Done reading") { vm.finishReading(verses) }
             } else {
-                val left = (duration - elapsed).coerceAtLeast(0)
-                WaitBar("Take your time · %d:%02d".format(left / 60, left % 60), "Keep reading. $left seconds left")
+                WaitBar("Reading…", "Keep reading. $left seconds left")
             }
         }
     }
 }
 
 @Composable
+private fun ThinProgress(value: Float) {
+    Box(Modifier.fillMaxWidth().height(2.dp).background(T.PaperLine)) {
+        Box(Modifier.fillMaxWidth(value.coerceIn(0f, 1f)).height(2.dp).background(T.Accent))
+    }
+}
+
+@Composable
 private fun Translit(text: String, size: Int) {
-    Text(text, color = T.Muted, fontSize = size.sp, fontStyle = FontStyle.Italic, lineHeight = (size * 1.45).sp)
+    Text(text, color = T.Muted, fontFamily = SerifItalicFont, fontSize = size.sp, lineHeight = (size * 1.4).sp, textAlign = TextAlign.Center)
 }
 
 @Composable
@@ -236,27 +292,25 @@ private fun RecallScreen(vm: MainViewModel) {
         else -> "Recall the whole verse, then check yourself."
     }
 
-    Column(Modifier.fillMaxSize().background(T.Surface).statusBarsPadding().navigationBarsPadding()) {
-        GateHeader("Muraja’ah · ${surah.name}", "Ayah ${verse.id} · review", if (canClose) vm::dismissGate else null)
+    Column(Modifier.fillMaxSize().background(T.Paper).statusBarsPadding().navigationBarsPadding()) {
+        GateHeader("Muraja’ah · ${surah.name}", if (canClose) vm::dismissGate else null)
 
         Column(
-            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(22.dp),
+            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(caption, color = T.Muted, fontSize = 14.sp)
+            VerseMark(verse.id)
+            Text(caption, color = T.Muted, fontSize = 14.sp, textAlign = TextAlign.Center)
             FadingVerse(verse.words, stage, revealed)
-            if (stage == 0 && state.showTransliteration) Translit(verse.transliteration, 14)
-            Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(T.Mist).padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Overline(if (stage == 3 && !revealed) "Recall the verse that means" else "Meaning")
-                Text(translationText(verse.translation ?: "Ayah ${verse.id} of ${surah.name}"), color = T.InkSoft, fontSize = 16.sp, lineHeight = 23.sp)
-                if (revealed || stage < 3) Footnotes(verse.footnotes)
-            }
+            if (stage == 0 && state.showTransliteration) Translit(verse.transliteration, 20)
+            VerseDivider()
+            Overline(if (stage == 3 && !revealed) "Recall the verse that means" else "Meaning", color = T.Muted)
+            Text(translationText(verse.translation ?: "Ayah ${verse.id} of ${surah.name}"), color = T.InkSoft, fontFamily = SerifFont, fontSize = 20.sp, lineHeight = 28.sp, textAlign = TextAlign.Center)
+            if (revealed || stage < 3) Footnotes(verse.footnotes)
         }
 
-        BottomBar {
+        BottomBar(label = "Review", trailingLabel = "Ayah ${verse.id} of ${surah.totalVerses}") {
             when {
                 stage == 3 && !revealed -> PrimaryButton("Tap to check") { revealed = true }
                 stage == 3 -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -289,7 +343,7 @@ private fun FadingVerse(words: List<String>, stage: Int, revealed: Boolean) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         FlowRow(
             Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = label },
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             words.forEachIndexed { index, word ->
@@ -306,9 +360,9 @@ private fun FadingVerse(words: List<String>, stage: Int, revealed: Boolean) {
                 Text(
                     word,
                     color = color,
-                    fontFamily = ArabicFont,
-                    fontSize = 32.sp,
-                    lineHeight = 54.sp,
+                    fontFamily = ReadingArabicFont,
+                    fontSize = 42.sp,
+                    lineHeight = 62.sp,
                     modifier = Modifier.drawBehind {
                         if (underline) {
                             drawLine(

@@ -30,10 +30,18 @@ object T {
     val StreakTint = Color(0xFFF6EBDD)
     val Danger = Color(0xFFB4432A)
 
+    /** Warm reading paper for the pause screens: one quiet surface, nothing else. */
+    val Paper = Color(0xFFFAF7F0)
+    val PaperLine = Color(0xFFEAE4D6)
+
     val Heat = listOf(Color(0xFFE6EAE8), Color(0xFFA8CFC7), Color(0xFF5E9F95), Color(0xFF1D6B62))
 }
 
 val ArabicFont = FontFamily(Font(R.font.amiri_regular))
+/** Large, open Arabic for the reading surface. */
+val ReadingArabicFont = FontFamily(Font(R.font.lateef_regular))
+val SerifFont = FontFamily(Font(R.font.cormorant_garamond_regular))
+val SerifItalicFont = FontFamily(Font(R.font.cormorant_garamond_italic))
 
 private val colors = lightColorScheme(
     primary = T.Accent,
