@@ -8,6 +8,8 @@ data class Verse(
     val durationSeconds: Int,
     /** English meaning. Null until the bundled data includes a licensed translation. */
     val translation: String? = null,
+    /** Translator's footnotes for this verse, e.g. "[2] Allāh is a proper name…". */
+    val footnotes: String? = null,
 ) {
     /** Arabic words, used by the fading muraja'ah view. */
     val words: List<String> get() = text.split(' ').filter { it.isNotBlank() }

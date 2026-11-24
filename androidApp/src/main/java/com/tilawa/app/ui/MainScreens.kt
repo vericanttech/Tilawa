@@ -210,7 +210,7 @@ private fun NowCard(vm: MainViewModel, surah: Surah) {
                     Text("Up next · ayah ${next.id}", color = T.Muted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     val translation = next.translation
                     if ((state.meaningFirst || goal == ReadingGoal.MEANING) && translation != null) {
-                        Text(translation, color = T.InkSoft, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(translationText(translation), color = T.InkSoft, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     } else {
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                             Text(
@@ -521,6 +521,11 @@ fun SettingsScreen(vm: MainViewModel) {
         TextButton(onClick = { showReset = true }, modifier = Modifier.fillMaxWidth()) {
             Text("Reset reading progress", color = T.Danger, fontSize = 15.sp)
         }
+        Text(
+            vm.quran.translationCredit,
+            color = T.Muted, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
         Text(
             "Tilawa for Android · ${context.packageManager.getPackageInfo(context.packageName, 0).versionName}",
             color = T.Muted, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),

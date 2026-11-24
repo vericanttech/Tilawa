@@ -164,13 +164,17 @@ private fun ReadingScreen(vm: MainViewModel) {
                     VerseBadge(verse.id)
                     val translation = verse.translation
                     if (meaningFirst && translation != null) {
-                        Text(translation, color = T.Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, lineHeight = 28.sp)
+                        Text(translationText(translation), color = T.Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, lineHeight = 28.sp)
                         ArabicText(verse.text, 22, T.MutedStrong)
                         if (state.showTransliteration) Translit(verse.transliteration, 13)
+                        Footnotes(verse.footnotes)
                     } else {
                         ArabicText(verse.text, 30, T.Ink)
                         if (state.showTransliteration) Translit(verse.transliteration, 14)
-                        if (translation != null) Text(translation, color = T.InkSoft, fontSize = 16.sp, lineHeight = 23.sp)
+                        if (translation != null) {
+                            Text(translationText(translation), color = T.InkSoft, fontSize = 16.sp, lineHeight = 23.sp)
+                            Footnotes(verse.footnotes)
+                        }
                     }
                 }
             }
@@ -247,7 +251,8 @@ private fun RecallScreen(vm: MainViewModel) {
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Overline(if (stage == 3 && !revealed) "Recall the verse that means" else "Meaning")
-                Text(verse.translation ?: "Ayah ${verse.id} of ${surah.name}", color = T.InkSoft, fontSize = 16.sp, lineHeight = 23.sp)
+                Text(translationText(verse.translation ?: "Ayah ${verse.id} of ${surah.name}"), color = T.InkSoft, fontSize = 16.sp, lineHeight = 23.sp)
+                if (revealed || stage < 3) Footnotes(verse.footnotes)
             }
         }
 
@@ -364,7 +369,7 @@ private fun DoneScreen(vm: MainViewModel, info: DoneInfo) {
             Overline(info.cardLabel)
             Spacer(Modifier.height(8.dp))
             if (info.cardTextIsArabic) ArabicText(info.cardText, 22, T.InkSoft)
-            else Text(info.cardText, color = T.InkSoft, fontSize = 16.sp, lineHeight = 23.sp)
+            else Text(translationText(info.cardText), color = T.InkSoft, fontSize = 16.sp, lineHeight = 23.sp)
             Spacer(Modifier.height(8.dp))
             Text(info.cardRef, color = T.Muted, fontSize = 13.sp)
         }

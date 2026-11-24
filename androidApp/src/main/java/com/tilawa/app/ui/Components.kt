@@ -25,6 +25,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.withStyle
 
 @Composable
 fun PrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
@@ -221,3 +224,43 @@ fun tilawaSwitchColors() = androidx.compose.material3.SwitchDefaults.colors(
     uncheckedTrackColor = T.Track,
     uncheckedBorderColor = T.Outline,
 )
+
+private val footnoteMarker = Regex("""\[\d+]""")
+
+/** Translation text with footnote markers like "[2]" kept (the text must not change) but drawn small and raised. */
+fun translationText(text: String): androidx.compose.ui.text.AnnotatedString =
+    androidx.compose.ui.text.buildAnnotatedString {
+        var last = 0
+        footnoteMarker.findAll(text).forEach { m ->
+            append(text.substring(last, m.range.first))
+            withStyle(
+                androidx.compose.ui.text.SpanStyle(
+                    fontSize = 10.sp,
+                    color = T.Accent,
+                    baselineShift = androidx.compose.ui.text.style.BaselineShift.Superscript,
+                ),
+            ) { append(m.value.trim('[', ']')) }
+            last = m.range.last + 1
+        }
+        append(text.substring(last))
+    }
+
+/** The translator's footnotes for a verse: collapsed behind a small link so a pause stays short. */
+@Composable
+fun Footnotes(text: String?) {
+    if (text.isNullOrBlank()) return
+    val notes = text.lines().filter { it.isNotBlank() }.map { it.trim() }
+    var open by androidx.compose.runtime.saveable.rememberSaveable(text) { androidx.compose.runtime.mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            if (open) "Hide translator’s notes" else "Translator’s notes (${notes.size})",
+            color = T.Accent,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                .clickable(role = Role.Button) { open = !open }
+                .padding(vertical = 4.dp),
+        )
+        if (open) notes.forEach { Text(it, color = T.Muted, fontSize = 12.sp, lineHeight = 17.sp) }
+    }
+}

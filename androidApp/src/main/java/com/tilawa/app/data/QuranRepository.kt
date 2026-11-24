@@ -3,7 +3,7 @@ package com.tilawa.app.data
 import android.content.Context
 import org.json.JSONArray
 
-class QuranRepository(context: Context) {
+class QuranRepository(private val context: Context) {
     val surahs: List<Surah> by lazy {
         context.assets.open("tilawa_quran.json").bufferedReader().use { reader ->
             parseSurahs(JSONArray(reader.readText()))
@@ -22,6 +22,16 @@ class QuranRepository(context: Context) {
         }
     }
 
+    /** Credit line for the bundled translation, from translation_info.txt (QuranEnc asks to keep it). */
+    val translationCredit: String by lazy {
+        val info = runCatching { context.assets.open("translation_info.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
+        val version = Regex("""\((v[^)]+)\)""").find(info)?.groupValues?.get(1)?.substringBefore("-csv") ?: ""
+        "English meanings: Saheeh International, by Noor International Center, from QuranEnc.com $version".trim()
+    }
+
+    private fun org.json.JSONObject.optStringOrNull(key: String): String? =
+        if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
+
     private fun parseSurahs(root: JSONArray): List<Surah> = buildList {
         for (i in 0 until root.length()) {
             val item = root.getJSONObject(i)
@@ -36,7 +46,8 @@ class QuranRepository(context: Context) {
                             transliteration = verse.optString("transliteration"),
                             wordCount = verse.getInt("word_count"),
                             durationSeconds = verse.getInt("duration_seconds"),
-                            translation = if (verse.isNull("translation")) null else verse.optString("translation").takeIf { it.isNotBlank() },
+                            translation = verse.optStringOrNull("translation"),
+                            footnotes = verse.optStringOrNull("footnotes"),
                         ),
                     )
                 }
