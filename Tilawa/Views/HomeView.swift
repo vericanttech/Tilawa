@@ -162,7 +162,7 @@ struct HomeView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(DesignTokens.muted)
                 if (s.meaningFirst || s.goal == .meaning), let translation = verse.translation {
-                    Text(translation)
+                    TranslationText.make(translation)
                         .font(DesignTokens.callout)
                         .foregroundColor(DesignTokens.inkSoft)
                         .lineLimit(2)

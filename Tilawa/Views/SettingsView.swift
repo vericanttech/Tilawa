@@ -602,6 +602,10 @@ struct SettingsView: View {
                     .foregroundColor(DesignTokens.gold)
             }
 
+            Link(TranslationText.credit, destination: URL(string: "https://quranenc.com/en/browse/english_saheeh")!)
+                .font(italic14)
+                .foregroundColor(DesignTokens.secondaryText)
+
             Text(Localization.L("settings.about_made_with", lang))
                 .font(italic14)
                 .foregroundColor(DesignTokens.secondaryText)

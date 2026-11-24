@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B1029 /* translation_info.txt in Resources */ = {isa = PBXBuildFile; fileRef = F1029 /* translation_info.txt */; };
 		B1026 /* TilawaUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1026 /* TilawaUI.swift */; };
 		B1027 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1027 /* OnboardingView.swift */; };
 		B1028 /* ProgressTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1028 /* ProgressTabView.swift */; };
@@ -93,6 +94,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1029 /* translation_info.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = translation_info.txt; sourceTree = "<group>"; };
 		F1026 /* TilawaUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TilawaUI.swift; sourceTree = "<group>"; };
 		F1027 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		F1028 /* ProgressTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressTabView.swift; sourceTree = "<group>"; };
@@ -259,6 +261,7 @@
 			isa = PBXGroup;
 			children = (
 				F1019 /* tilawa_quran.json */,
+				F1029 /* translation_info.txt */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -501,6 +504,7 @@
 				FBFA7A132F670B04004DA9DA /* Amiri-Regular.ttf in Resources */,
 				FBFA7A142F670B04004DA9DA /* CormorantGaramond-Regular.ttf in Resources */,
 				B1019 /* tilawa_quran.json in Resources */,
+				B1029 /* translation_info.txt in Resources */,
 				B1022 /* en.lproj/Localizable.strings in Resources */,
 				B1023 /* fr.lproj/Localizable.strings in Resources */,
 				B1024 /* ar.lproj/Localizable.strings in Resources */,

@@ -23,11 +23,13 @@ struct Verse: Codable, Identifiable {
     let transliteration: String
     /// English meaning. Optional until the bundled data includes a licensed translation.
     let translation: String?
+    /// Translator's footnotes, e.g. "[2] Allāh is a proper name…".
+    let footnotes: String?
     let wordCount: Int
     let durationSeconds: Int
 
     enum CodingKeys: String, CodingKey {
-        case id, text, transliteration, translation
+        case id, text, transliteration, translation, footnotes
         case wordCount = "word_count"
         case durationSeconds = "duration_seconds"
     }

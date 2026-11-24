@@ -161,21 +161,23 @@ struct ReadingView: View {
         VStack(alignment: .leading, spacing: 12) {
             VerseBadge(number: verse.id)
             if meaningFirst, let translation = verse.translation {
-                Text(translation)
+                TranslationText.make(translation)
                     .font(.system(size: 20, weight: .medium))
                     .foregroundColor(DesignTokens.ink)
                     .fixedSize(horizontal: false, vertical: true)
                 arabic(verse, size: 22, color: DesignTokens.mutedStrong)
                 transliteration(verse, size: 13)
+                FootnotesView(text: verse.footnotes)
             } else {
                 arabic(verse, size: 30, color: DesignTokens.ink)
                 transliteration(verse, size: 14)
                 if let translation = verse.translation {
-                    Text(translation)
+                    TranslationText.make(translation)
                         .font(DesignTokens.body)
                         .foregroundColor(DesignTokens.inkSoft)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
+                    FootnotesView(text: verse.footnotes)
                 }
             }
         }
@@ -363,10 +365,11 @@ struct RecallView: View {
         VStack(alignment: .leading, spacing: 4) {
             Overline(text: stage == 3 && !revealed ? "Recall the verse that means" : "Meaning")
             if let translation = verse.translation {
-                Text(translation)
+                TranslationText.make(translation)
                     .font(DesignTokens.body)
                     .foregroundColor(DesignTokens.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
+                FootnotesView(text: revealed || stage < 3 ? verse.footnotes : nil)
             } else {
                 Text("Ayah \(verse.id) of \(surah?.name ?? "")")
                     .font(DesignTokens.body)
@@ -591,7 +594,7 @@ struct DoneView: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .environment(\.layoutDirection, .rightToLeft)
                 } else {
-                    Text(info.cardText)
+                    TranslationText.make(info.cardText)
                         .font(DesignTokens.body)
                         .foregroundColor(DesignTokens.inkSoft)
                         .lineSpacing(3)

@@ -240,3 +240,68 @@ struct VerseBadge: View {
         .accessibilityLabel("Ayah \(number)")
     }
 }
+
+// MARK: - Translation
+
+/// Translation text with footnote markers like "[2]" kept (QuranEnc asks that the text is not changed)
+/// but drawn small and raised.
+enum TranslationText {
+    static func make(_ text: String) -> Text {
+        var result = Text("")
+        var rest = Substring(text)
+        while let range = rest.range(of: #"\[\d+\]"#, options: .regularExpression) {
+            result = result + Text(String(rest[rest.startIndex..<range.lowerBound]))
+            let number = rest[range].dropFirst().dropLast()
+            result = result + Text(String(number))
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(DesignTokens.accent)
+                .baselineOffset(7)
+            rest = rest[range.upperBound...]
+        }
+        return result + Text(String(rest))
+    }
+
+    /// Credit line for the bundled translation; the version comes from translation_info.txt.
+    static let credit: String = {
+        let info = Bundle.main.url(forResource: "translation_info", withExtension: "txt")
+            .flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
+        var version = ""
+        if let match = info.range(of: #"\(v[^)]+\)"#, options: .regularExpression) {
+            version = String(info[match].dropFirst().dropLast())
+            if let dash = version.range(of: "-csv") { version = String(version[..<dash.lowerBound]) }
+        }
+        return "English meanings: Saheeh International, by Noor International Center, from QuranEnc.com \(version)"
+            .trimmingCharacters(in: .whitespaces)
+    }()
+}
+
+/// The translator's footnotes for a verse, collapsed behind a small link so a pause stays short.
+struct FootnotesView: View {
+    let text: String?
+    @State private var open = false
+
+    private var notes: [String] {
+        (text ?? "").split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    var body: some View {
+        if !notes.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Button(open ? "Hide translator’s notes" : "Translator’s notes (\(notes.count))") {
+                    withAnimation(.easeInOut(duration: 0.2)) { open.toggle() }
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(DesignTokens.accent)
+                .buttonStyle(.plain)
+                if open {
+                    ForEach(notes, id: \.self) { note in
+                        Text(note)
+                            .font(.system(size: 12))
+                            .foregroundColor(DesignTokens.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+    }
+}
