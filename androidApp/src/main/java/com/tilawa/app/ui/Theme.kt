@@ -1,42 +1,51 @@
 package com.tilawa.app.ui
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import com.tilawa.app.R
 
-val Parchment = Color(0xFFF5EDD8)
-val ParchmentDark = Color(0xFFEAD9B2)
-val Ink = Color(0xFF1E1408)
-val InkMid = Color(0xFF4A3520)
-val InkLight = Color(0xFF7A5C35)
-val ChromeBg = Color(0xFF2A1F0F)
-val ChromeCard = Color(0xFF332613)
-val ChromeCard2 = Color(0xFF3A2C18)
-val ChromeText = Color(0xFFC8A86A)
-val ChromeMuted = Color(0xFF9A7A50)
-val Gold = Color(0xFFB8860B)
-val GoldLight = Color(0xFFD4A843)
-val GoldPale = Color(0xFFF0D898)
-val Danger = Color(0xFFC96B5C)
+/** Calm & modern palette (Tilawa redesign, Nov 2026). Same tokens as iOS DesignTokens. */
+object T {
+    val Mist = Color(0xFFF5F6F2)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceMuted = Color(0xFFF2F4F3)
+    val Track = Color(0xFFE6EAE8)
+    val Hairline = Color(0xFFEEF1EF)
+    val Outline = Color(0xFFD5DDDB)
 
-val ArabicFont = FontFamily(Font(R.font.lateef_regular))
-val DisplayFont = FontFamily(
-    Font(R.font.cormorant_garamond_regular),
-    Font(R.font.cormorant_garamond_italic, style = FontStyle.Italic),
-)
+    val Ink = Color(0xFF17262A)
+    val InkSoft = Color(0xFF24363A)
+    val Muted = Color(0xFF56656A)
+    val MutedStrong = Color(0xFF3E4D51)
 
-private val colors = darkColorScheme(
-    primary = Gold,
-    onPrimary = Ink,
-    background = ChromeBg,
-    onBackground = ChromeText,
-    surface = ChromeCard,
-    onSurface = ChromeText,
+    val Accent = Color(0xFF1D6B62)
+    val AccentTint = Color(0xFFE2EEEA)
+    val OnAccentTint = Color(0xFF24413D)
+
+    val Streak = Color(0xFF9A5B13)
+    val StreakTint = Color(0xFFF6EBDD)
+    val Danger = Color(0xFFB4432A)
+
+    val Heat = listOf(Color(0xFFE6EAE8), Color(0xFFA8CFC7), Color(0xFF5E9F95), Color(0xFF1D6B62))
+}
+
+val ArabicFont = FontFamily(Font(R.font.amiri_regular))
+
+private val colors = lightColorScheme(
+    primary = T.Accent,
+    onPrimary = Color.White,
+    primaryContainer = T.AccentTint,
+    background = T.Mist,
+    onBackground = T.Ink,
+    surface = T.Surface,
+    onSurface = T.Ink,
+    surfaceVariant = T.SurfaceMuted,
+    onSurfaceVariant = T.Muted,
+    outline = T.Outline,
 )
 
 @Composable

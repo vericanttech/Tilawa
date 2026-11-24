@@ -36,6 +36,7 @@ class QuranRepository(context: Context) {
                             transliteration = verse.optString("transliteration"),
                             wordCount = verse.getInt("word_count"),
                             durationSeconds = verse.getInt("duration_seconds"),
+                            translation = if (verse.isNull("translation")) null else verse.optString("translation").takeIf { it.isNotBlank() },
                         ),
                     )
                 }

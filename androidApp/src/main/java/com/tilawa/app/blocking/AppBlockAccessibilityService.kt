@@ -12,6 +12,7 @@ import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.tilawa.app.MainActivity
+import com.tilawa.app.data.StateStore
 
 class AppBlockAccessibilityService : AccessibilityService() {
     private val guard by lazy { AppGuardRepository(this) }
@@ -67,8 +68,13 @@ class AppBlockAccessibilityService : AccessibilityService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val prefs = getSharedPreferences(StateStore.PREFS, Context.MODE_PRIVATE)
+        val isReview = prefs.getString(StateStore.KEY_PAUSE_GOAL, null) == "REVIEW"
+        val detail = prefs.getString(StateStore.KEY_PAUSE_DETAIL, null)
+            ?: "Read a few verses of the Quran to open it."
         val title = "$appLabel is paused"
-        val message = "Tap to read your next ayahs in Tilawa. When you finish, $appLabel will open."
+        val message = "$detail Tap to begin; $appLabel opens when you finish."
+        val actionLabel = if (isReview) "Review now" else "Read now"
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(com.tilawa.app.R.drawable.ic_notification)
             .setContentTitle(title)
@@ -77,18 +83,18 @@ class AppBlockAccessibilityService : AccessibilityService() {
                 Notification.BigTextStyle()
                     .setBigContentTitle(title)
                     .bigText(message)
-                    .setSummaryText("Tilawa · Quran reading gate"),
+                    .setSummaryText("Tilawa"),
             )
             .setContentIntent(contentIntent)
             .setCategory(Notification.CATEGORY_REMINDER)
-            .setColor(0xFFB8860B.toInt())
+            .setColor(0xFF1D6B62.toInt())
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)
             .addAction(
                 Notification.Action.Builder(
                     Icon.createWithResource(this, com.tilawa.app.R.drawable.ic_notification),
-                    "READ NOW",
+                    actionLabel,
                     contentIntent,
                 ).build(),
             )

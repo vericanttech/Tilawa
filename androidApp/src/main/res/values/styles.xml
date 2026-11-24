@@ -2,9 +2,10 @@
 <resources>
     <style name="Theme.Tilawa" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:statusBarColor">#2A1F0F</item>
-        <item name="android:navigationBarColor">#2A1F0F</item>
+        <item name="android:windowBackground">@color/tilawa_mist</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/tilawa_mist</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
 </resources>

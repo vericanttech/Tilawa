@@ -39,6 +39,14 @@ class AppGuardRepository(private val context: Context) {
         prefs.getString(KEY_ALLOWED_PACKAGE, null) == packageName &&
             System.currentTimeMillis() < prefs.getLong(KEY_UNLOCK_UNTIL, 0)
 
+    /** Time left before a just-opened app is paused again; 0 when nothing is open (or it never relocks). */
+    fun unlockRemainingMillis(): Long {
+        if (prefs.getString(KEY_ALLOWED_PACKAGE, null) == null) return 0
+        val until = prefs.getLong(KEY_UNLOCK_UNTIL, 0)
+        if (until == Long.MAX_VALUE) return 0
+        return (until - System.currentTimeMillis()).coerceAtLeast(0)
+    }
+
     companion object {
         const val PREFS = "tilawa_guard"
         const val KEY_PACKAGES = "guarded_packages"
