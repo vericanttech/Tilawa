@@ -55,9 +55,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.tilawa.app.MainViewModel
+import com.tilawa.app.data.ReadIn
 import com.tilawa.app.data.ReadingGoal
 import com.tilawa.app.data.ReadingSpeed
 import com.tilawa.app.data.Surah
+import com.tilawa.app.data.Verse
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 
 /** Starter surahs suggested in onboarding and the library. */
 object Suggested {
@@ -84,8 +89,9 @@ fun OnboardingScreen(vm: MainViewModel) {
     when (step) {
         0 -> Welcome { step = 1 }
         1 -> GoalStep(vm, back = { step = 0 }) { step = 2 }
-        2 -> AppsStep(vm, back = { step = 1 }) { step = 3 }
-        else -> SurahStep(vm, back = { step = 2 }, browse = { browsing = true }) { vm.completeOnboarding() }
+        2 -> ReadInStep(vm, back = { step = 1 }) { step = 3 }
+        3 -> AppsStep(vm, back = { step = 2 }) { step = 4 }
+        else -> SurahStep(vm, back = { step = 3 }, browse = { browsing = true }) { vm.completeOnboarding() }
     }
 }
 
@@ -119,6 +125,8 @@ private fun Welcome(next: () -> Unit) {
     }
 }
 
+private const val STEPS = 4
+
 @Composable
 private fun StepScaffold(
     current: Int,
@@ -133,8 +141,8 @@ private fun StepScaffold(
             CircleIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", background = T.Surface, onClick = back)
             Spacer(Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.End) {
-                StepBars(current, 3)
-                Text("Step $current of 3", color = T.Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                StepBars(current, STEPS)
+                Text("Step $current of $STEPS", color = T.Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             }
         }
         Column(
@@ -187,6 +195,71 @@ fun GoalCard(goal: ReadingGoal, on: Boolean, onClick: () -> Unit) {
     }
 }
 
+/** Which text the person can read: it becomes the large text at every pause. */
+@Composable
+private fun ReadInStep(vm: MainViewModel, back: () -> Unit, next: () -> Unit) {
+    val sample = vm.quran.surah(1)?.verses?.firstOrNull()
+    StepScaffold(
+        2,
+        "How do you read the Quran?",
+        "We’ll show that large at each pause. You can change it anytime with Aa.",
+        back,
+        footer = { PrimaryButton("Continue", onClick = next) },
+    ) {
+        ReadIn.entries.forEach { option ->
+            ReadInCard(option, sample, vm.state.readIn == option) { vm.update { it.copy(readIn = option) } }
+        }
+    }
+}
+
+@Composable
+private fun ReadInCard(option: ReadIn, sample: Verse?, on: Boolean, onClick: () -> Unit) {
+    val (title, detail) = when (option) {
+        ReadIn.ARABIC -> "I read Arabic" to "The Arabic is shown large."
+        ReadIn.TRANSLITERATION -> "I sound it out in Latin letters" to "For when you can’t read the Arabic script yet."
+        ReadIn.ENGLISH -> "I read for the meaning" to "The English meaning is shown large."
+    }
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(T.Surface)
+            .border(2.dp, if (on) T.Accent else T.Surface, RoundedCornerShape(20.dp))
+            .clickable(role = Role.RadioButton, onClick = onClick)
+            .semantics { selected = on }
+            .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(title, color = T.Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text(detail, color = T.Muted, fontSize = 14.sp, lineHeight = 19.sp)
+            }
+            Box(
+                Modifier.size(22.dp).clip(CircleShape)
+                    .background(if (on) T.Accent else T.Surface)
+                    .border(2.dp, if (on) T.Accent else T.Outline, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) { if (on) Icon(Icons.Default.Check, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(14.dp)) }
+        }
+        if (sample != null) {
+            // A real first verse, so people can tell which one they can read.
+            Box(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(T.Paper).padding(horizontal = 14.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                when (option) {
+                    ReadIn.ARABIC -> CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        Text(sample.text, color = T.Ink, fontFamily = ReadingArabicFont, fontSize = 30.sp, lineHeight = 44.sp, textAlign = TextAlign.Center)
+                    }
+                    ReadIn.TRANSLITERATION -> Text(sample.transliteration, color = T.Ink, fontFamily = SerifFont, fontSize = 22.sp, lineHeight = 28.sp, textAlign = TextAlign.Center)
+                    // Only the licensed translation text, never a paraphrase.
+                    ReadIn.ENGLISH -> sample.translation?.let {
+                        Text(translationText(it), color = T.Ink, fontFamily = SerifFont, fontSize = 19.sp, lineHeight = 25.sp, textAlign = TextAlign.Center)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun AppsStep(vm: MainViewModel, back: () -> Unit, next: () -> Unit) {
     val context = LocalContext.current
@@ -200,7 +273,7 @@ private fun AppsStep(vm: MainViewModel, back: () -> Unit, next: () -> Unit) {
     val count = vm.guardedPackages.size
 
     StepScaffold(
-        2,
+        3,
         "Which apps pull you in?",
         "Each time you open one, you’ll spend a few seconds with the Quran first. You can change them anytime.",
         back,
@@ -260,7 +333,7 @@ private fun SurahStep(vm: MainViewModel, back: () -> Unit, browse: () -> Unit, s
         ReadingGoal.REVIEW -> "Each pause asks you to recall one verse. Verses you know well come back less often."
         ReadingGoal.MEANING -> "Each pause continues where you left off, with the English meaning first."
     }
-    StepScaffold(3, title, subtitle, back, footer = { PrimaryButton("Start", onClick = start) }) {
+    StepScaffold(4, title, subtitle, back, footer = { PrimaryButton("Start", onClick = start) }) {
         val ids = Suggested.starters.map { it.first }.let { if (vm.state.selectedSurahId in it) it else listOf(vm.state.selectedSurahId) + it }
         ids.forEach { id ->
             val surah = vm.quran.surah(id) ?: return@forEach
