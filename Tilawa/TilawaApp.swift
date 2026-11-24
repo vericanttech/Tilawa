@@ -46,75 +46,63 @@ struct TilawaApp: App {
     @State private var selectedTab = 0
     @State private var hasRequestedAuth = false
 
-    /// TabView when no gate needed; GateView only after explicit request (or unlock window / post-setup).
+    /// TabView when no gate needed; GateView only after explicit request, and while the done screen shows.
     private var showMainTabs: Bool {
-        if !shield.hasAppsToShield { return true }
-        if shield.isUnlockWindowActive { return true }
+        if shield.showingCompletion { return false }
+        if !shield.hasAppsToShield { return !shield.userRequestedReadingGate }
+        if shield.isUnlockWindowActive { return !shield.userRequestedReadingGate }
         if shield.skipGateAfterAddingApps { return true }
         return !shield.userRequestedReadingGate
     }
 
     init() {
-        // Tab bar: solid parchment, no translucency
-        let parchment = UIColor(red: 0.98, green: 0.95, blue: 0.91, alpha: 1.0)
-        let muted = UIColor(red: 0.47, green: 0.36, blue: 0.21, alpha: 1.0)
-        let gold = UIColor(red: 0.72, green: 0.53, blue: 0.07, alpha: 1.0)
-        UITabBar.appearance().backgroundColor = parchment
-        UITabBar.appearance().isTranslucent = false
-        UITabBar.appearance().unselectedItemTintColor = muted
-        UITabBarItem.appearance().setTitleTextAttributes(
-            [.foregroundColor: gold],
-            for: .selected
-        )
-        // 1px top border
-        let border = UIView()
-        border.backgroundColor = UIColor(red: 0.72, green: 0.53, blue: 0.07, alpha: 0.15)
-        border.translatesAutoresizingMaskIntoConstraints = false
-        // Applied via appearance we can't add a subview; we'll use a SwiftUI overlay in each tab if needed, or a custom TabView style. Actually UITabBar doesn't support top border easily. We can use a custom overlay in the main content. Skip for now or add a thin divider in the tab bar area via SwiftUI. Task said "with a top border 1px rgba(180,134,11,0.15)" - I'll add an overlay in the TabView content that shows a line at the top of the tab bar. Actually the tab bar is at the bottom. So "top border" of the tab bar = the edge that touches the content, i.e. the top of the tab bar rectangle. We can't easily do that with appearance. I'll leave a note or use a custom tab bar wrapper. For now proceed without that pixel line; user can ask to add it later.
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .white
+        appearance.shadowColor = UIColor(red: 0.93, green: 0.945, blue: 0.937, alpha: 1) // hairline
+        let teal = UIColor(red: 0.114, green: 0.42, blue: 0.384, alpha: 1)
+        let muted = UIColor(red: 0.337, green: 0.396, blue: 0.416, alpha: 1)
+        for layout in [appearance.stackedLayoutAppearance, appearance.inlineLayoutAppearance, appearance.compactInlineLayoutAppearance] {
+            layout.normal.iconColor = muted
+            layout.normal.titleTextAttributes = [.foregroundColor: muted]
+            layout.selected.iconColor = teal
+            layout.selected.titleTextAttributes = [.foregroundColor: teal]
+        }
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if showMainTabs {
-                    ZStack(alignment: .bottom) {
-                        TabView(selection: $selectedTab) {
-                            HomeView(appState: appState, shield: shield)
-                                .tabItem {
-                                    Label("Home", systemImage: "book.pages")
-                                }
-                                .tag(0)
+                if !appState.state.hasCompletedOnboarding {
+                    OnboardingView(appState: appState, shield: shield)
+                } else if showMainTabs {
+                    TabView(selection: $selectedTab) {
+                        HomeView(appState: appState, shield: shield)
+                            .tabItem { Label("Today", systemImage: "sun.max") }
+                            .tag(0)
 
-                            SetupView(appState: appState, shield: shield)
-                                .tabItem {
-                                    Label("Surah", systemImage: "moon.stars")
-                                }
-                                .tag(1)
+                        SetupView(appState: appState, shield: shield)
+                            .tabItem { Label("Surahs", systemImage: "book") }
+                            .tag(1)
 
-                            SettingsView(appState: appState, shield: shield)
-                                .tabItem {
-                                    Label("Settings", systemImage: "gearshape")
-                                }
-                                .tag(2)
-                        }
-                        Rectangle()
-                            .fill(DesignTokens.cardBorder)
-                            .frame(height: 1)
-                            .frame(maxWidth: .infinity)
-                            .offset(y: -49)
+                        ProgressTabView(appState: appState)
+                            .tabItem { Label("Progress", systemImage: "chart.bar") }
+                            .tag(2)
+
+                        SettingsView(appState: appState, shield: shield)
+                            .tabItem { Label("Settings", systemImage: "gearshape") }
+                            .tag(3)
                     }
+                    .tint(DesignTokens.accent)
                 } else {
                     GateView(appState: appState, shield: shield)
                 }
             }
             .onAppear {
                 quran.load()
-                if appState.state.isFirstLaunch {
-                    appState.state.isFirstLaunch = false
-                    StatsService.shared.saveState(appState.state)
-                    selectedTab = 1
-                }
-                if !hasRequestedAuth {
+                if appState.state.hasCompletedOnboarding && !hasRequestedAuth {
                     hasRequestedAuth = true
                     Task {
                         await shield.requestAuthorization()

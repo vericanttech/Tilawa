@@ -18,7 +18,7 @@ class ShieldActionExtension: ShieldActionDelegate {
             scheduleOpenAyahNotification()
             completionHandler(.none)
         case .secondaryButtonPressed:
-            completionHandler(.defer)
+            completionHandler(.close)
         @unknown default:
             completionHandler(.defer)
         }
@@ -27,8 +27,15 @@ class ShieldActionExtension: ShieldActionDelegate {
     /// Schedule a local notification so the user can tap the banner to open Tilawa and go to the read screen.
     private func scheduleOpenAyahNotification() {
         let content = UNMutableNotificationContent()
-        content.title = "Ready to read?"
-        content.body = "Tap here to read your Ayah and unlock your apps."
+        let defaults = UserDefaults(suiteName: "group.com.tilawa.app")
+        let surah = defaults?.string(forKey: "tilawa.shield.surahName") ?? "your surah"
+        if defaults?.string(forKey: "tilawa.shield.goal") == "review" {
+            content.title = "Time for muraja’ah"
+            content.body = "Tap to recall a verse of \(surah). Your app opens right after."
+        } else {
+            content.title = "Ready to read?"
+            content.body = "Tap to read a few verses of \(surah). Your app opens right after."
+        }
         content.sound = .default
         let request = UNNotificationRequest(
             identifier: "tilawa.open_ayah_reader",
@@ -50,7 +57,7 @@ class ShieldActionExtension: ShieldActionDelegate {
             scheduleOpenAyahNotification()
             completionHandler(.none)
         case .secondaryButtonPressed:
-            completionHandler(.defer)
+            completionHandler(.close)
         @unknown default:
             completionHandler(.defer)
         }

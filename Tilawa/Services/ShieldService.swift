@@ -34,6 +34,10 @@ final class ShieldService: ObservableObject {
     /// When true, user chose to open the reading gate (Home button or shield notification). Gate is not shown on a normal app open.
     @Published var userRequestedReadingGate = false
 
+    /// True while the "Done, apps open" screen is showing after a reading. Keeps the reading
+    /// flow on screen even though the unlock window has already started.
+    @Published var showingCompletion = false
+
     /// Tokens the user has turned off in settings (still in selection, but not shielded).
     @Published var excludedApplicationTokens: Set<ApplicationToken> = []
     @Published var excludedCategoryTokens: Set<ActivityCategoryToken> = []

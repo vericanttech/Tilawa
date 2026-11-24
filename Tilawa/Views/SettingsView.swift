@@ -10,8 +10,8 @@ struct SettingsView: View {
     @State private var simulatorAlert = false
     @State private var languageSectionExpanded = false
 
-    private let capsFont = Font.custom("CormorantGaramond-Regular", size: 13)
-    private let sectionLabelFont = Font.custom("CormorantGaramond-Regular", size: 12)
+    private let capsFont = Font.system(size: 13, weight: .semibold)
+    private let sectionLabelFont = Font.system(size: 12, weight: .semibold)
     private var lang: Language { appState.state.language }
 
     var body: some View {
@@ -25,10 +25,10 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: DesignTokens.spacing3xl) {
+                    readingSection
                     guardedAppsSection
                     lockScheduleSection
                     languageSection
-                    readingSection
                     dataSection
                     aboutCard
                 }
@@ -100,7 +100,7 @@ struct SettingsView: View {
                                 .font(.system(size: 17))
                                 .foregroundColor(DesignTokens.primaryText)
                             Text(lang.nativeName)
-                                .font(Font.custom("CormorantGaramond-Italic", size: 13))
+                                .font(Font.system(size: 13))
                                 .foregroundColor(DesignTokens.secondaryText)
                         }
                         Spacer()
@@ -141,7 +141,7 @@ struct SettingsView: View {
                         .font(.system(size: 17))
                         .foregroundColor(DesignTokens.primaryText)
                     Text(option.nativeName)
-                        .font(Font.custom("CormorantGaramond-Italic", size: 13))
+                        .font(Font.system(size: 13))
                         .foregroundColor(DesignTokens.secondaryText)
                 }
                 Spacer()
@@ -171,11 +171,74 @@ struct SettingsView: View {
                 .foregroundColor(DesignTokens.sectionLabel)
 
             VStack(spacing: 0) {
+                goalRow
+                Rectangle().fill(DesignTokens.cardBorder).frame(height: 1)
+                meaningFirstRow
+                Rectangle().fill(DesignTokens.cardBorder).frame(height: 1)
                 readingSpeedRow
                 Rectangle().fill(DesignTokens.cardBorder).frame(height: 1)
                 transliterationRow
             }
+            .background(DesignTokens.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusLg))
         }
+    }
+
+    private var goalRow: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
+            Text("My goal")
+                .font(.system(size: 17))
+                .foregroundColor(DesignTokens.primaryText)
+            ForEach(ReadingGoal.allCases) { goal in
+                let on = appState.state.goal == goal
+                Button { appState.setGoal(goal) } label: {
+                    HStack(spacing: DesignTokens.spacingM) {
+                        Image(systemName: goal.systemImage)
+                            .font(.system(size: 16))
+                            .foregroundColor(on ? .white : DesignTokens.accent)
+                            .frame(width: 36, height: 36)
+                            .background(RoundedRectangle(cornerRadius: DesignTokens.radiusSm).fill(on ? DesignTokens.accent : DesignTokens.accentTint))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(goal.title)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(DesignTokens.ink)
+                            Text(goal.summary)
+                                .font(.system(size: 13))
+                                .foregroundColor(DesignTokens.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer()
+                        if on {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(DesignTokens.accent)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(DesignTokens.spacingL)
+    }
+
+    private var meaningFirstRow: some View {
+        Toggle(isOn: Binding(
+            get: { appState.state.meaningFirst },
+            set: { appState.state.meaningFirst = $0 }
+        )) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Meaning first")
+                    .font(.system(size: 17))
+                    .foregroundColor(DesignTokens.primaryText)
+                Text("Show the English meaning large, with the Arabic below.")
+                    .font(.system(size: 13))
+                    .foregroundColor(DesignTokens.secondaryText)
+            }
+        }
+        .tint(DesignTokens.accent)
+        .padding(DesignTokens.spacingL)
     }
 
     // MARK: - Lock schedule
@@ -201,7 +264,7 @@ struct SettingsView: View {
                             .font(.system(size: 17))
                             .foregroundColor(DesignTokens.primaryText)
                         Text("Tilawa will lock your guarded apps after this delay.")
-                            .font(Font.custom("CormorantGaramond-Italic", size: 13))
+                            .font(Font.system(size: 13))
                             .foregroundColor(DesignTokens.secondaryText)
                     }
                     Spacer(minLength: 0)
@@ -240,7 +303,7 @@ struct SettingsView: View {
                         .font(.system(size: 17))
                         .foregroundColor(DesignTokens.primaryText)
                     Text(Localization.L("settings.reading_speed_subtitle", lang))
-                        .font(Font.custom("CormorantGaramond-Italic", size: 13))
+                        .font(Font.system(size: 13))
                         .foregroundColor(DesignTokens.secondaryText)
                 }
                 Spacer(minLength: 0)
@@ -261,7 +324,7 @@ struct SettingsView: View {
     private var transliterationRow: some View {
         HStack(spacing: DesignTokens.spacingM) {
             Text("أ")
-                .font(Font.custom("Lateef-Regular", size: 22))
+                .font(DesignTokens.arabic(22))
                 .foregroundColor(DesignTokens.ink)
                 .frame(width: 36, height: 36)
                 .background(DesignTokens.gold.opacity(0.25))
@@ -271,7 +334,7 @@ struct SettingsView: View {
                     .font(.system(size: 17))
                     .foregroundColor(DesignTokens.primaryText)
                 Text(Localization.L("settings.transliteration_subtitle", lang))
-                    .font(Font.custom("CormorantGaramond-Italic", size: 13))
+                    .font(Font.system(size: 13))
                     .foregroundColor(DesignTokens.secondaryText)
             }
             Spacer()
@@ -298,7 +361,7 @@ struct SettingsView: View {
                     .foregroundColor(DesignTokens.primaryText)
             }
             Text(Localization.L("settings.guarded_apps_subtitle", lang))
-                .font(Font.custom("CormorantGaramond-Italic", size: 14))
+                .font(Font.system(size: 14))
                 .foregroundColor(DesignTokens.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -440,7 +503,7 @@ struct SettingsView: View {
                         Text(Localization.L("common.done", lang))
                     }
                     .buttonStyle(.plain)
-                    .font(Font.custom("CormorantGaramond-Regular", size: 16))
+                    .font(Font.system(size: 16, weight: .semibold))
                     .foregroundColor(DesignTokens.gold)
                 }
             }
@@ -473,7 +536,7 @@ struct SettingsView: View {
                             .font(.system(size: 17))
                             .foregroundColor(DesignTokens.danger)
                         Text(Localization.L("settings.reset_progress_subtitle", lang))
-                            .font(Font.custom("CormorantGaramond-Italic", size: 13))
+                            .font(Font.system(size: 13))
                             .foregroundColor(DesignTokens.secondaryText)
                     }
                     Spacer()
@@ -516,7 +579,7 @@ struct SettingsView: View {
     }
 
     private var attributionText: some View {
-        let italic14 = Font.custom("CormorantGaramond-Italic", size: 14)
+        let italic14 = Font.system(size: 14)
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(Localization.L("settings.about_quran_from", lang))

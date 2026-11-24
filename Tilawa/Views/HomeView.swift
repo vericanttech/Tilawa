@@ -1,52 +1,38 @@
 import FamilyControls
 import SwiftUI
 
+/// "Today": the current surah and goal, this week's rhythm, and the paused apps.
 struct HomeView: View {
     @ObservedObject var appState: AppStateStore
     @ObservedObject var shield: ShieldService
+
     @State private var remainingSeconds: Int = 0
     @State private var timer: Timer?
+    @State private var showingPicker = false
 
     private let quran = QuranService.shared
+    private var surah: Surah? { quran.surah(id: appState.state.selectedSurahId) }
 
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-                .background(DesignTokens.appBackground)
-
-            if remainingSeconds > 0 {
-                unlockBanner
-                    .background(DesignTokens.appBackground)
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+                header
+                if remainingSeconds > 0 { unlockBanner }
+                if let surah { nowCard(surah) }
+                weekCard
+                appsCard
             }
-
-            Divider()
-                .background(DesignTokens.cardBorder)
-                .opacity(0)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: DesignTokens.spacing2xl) {
-                    if let surah = quran.surah(id: appState.state.selectedSurahId) {
-                        SurahCard(
-                            surah: surah,
-                            progressAyahs: progressAyahs(surah),
-                            nextAyahPreview: nextAyahPreview(surah),
-                            language: appState.state.language,
-                            showTransliteration: appState.state.showTransliteration
-                        )
-                        .padding(.horizontal, DesignTokens.spacingXl)
-                    }
-
-                    statsRow
-
-                    guardedAppsSection
-
-                    unlockButtonSection
-                }
-                .padding(.bottom, 32)
-            }
-            .clipped()
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 32)
         }
-        .background(DesignTokens.appBackground)
+        .background(DesignTokens.mist.ignoresSafeArea())
+        .familyActivityPicker(isPresented: $showingPicker, selection: $shield.selection)
+        .onChange(of: shield.selection) { _ in
+            shield.saveSelection()
+            shield.applyShield()
+            shield.startFullDayMonitoring()
+        }
         .onAppear {
             updateRemaining()
             startTimer()
@@ -57,152 +43,253 @@ struct HomeView: View {
         }
     }
 
-    private var topBar: some View {
-        HStack {
+    // MARK: Header
+
+    private var header: some View {
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Assalamu alaikum")
+                    .font(DesignTokens.callout)
+                    .foregroundColor(DesignTokens.muted)
+                Text("Today")
+                    .font(DesignTokens.largeTitle)
+                    .foregroundColor(DesignTokens.ink)
+            }
             Spacer()
-            (Text("Tilaw").foregroundColor(DesignTokens.topBarTitle) + Text("a").foregroundColor(DesignTokens.gold))
-                .font(.system(size: 18))
-            Spacer()
+            if appState.state.streakDays > 0 {
+                StreakPill(text: "\(appState.state.streakDays)")
+                    .accessibilityLabel("\(appState.state.streakDays)-day streak")
+            }
         }
-        .padding(.horizontal, DesignTokens.spacingXl)
-        .padding(.top, DesignTokens.spacing2xl)
-        .padding(.bottom, DesignTokens.spacingS)
     }
 
     private var unlockBanner: some View {
-        HStack {
-            Text("Locking in \(remainingMinutesText)")
-                .font(Font.custom("CormorantGaramond-Regular", size: 13))
-                .foregroundColor(.white)
+        HStack(spacing: 10) {
+            Image(systemName: "lock.open")
+                .font(.system(size: 14, weight: .semibold))
+            Text("Apps open · locking in \(max(1, remainingSeconds / 60)) min")
+                .font(.system(size: 14, weight: .semibold))
             Spacer()
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, DesignTokens.spacingXl)
-        .background(
-            RoundedRectangle(cornerRadius: 999)
-                .fill(DesignTokens.gold)
-        )
-        .padding(.horizontal, DesignTokens.spacingXl)
-        .padding(.bottom, DesignTokens.spacingS)
+        .foregroundColor(DesignTokens.onAccentTint)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: DesignTokens.radiusLg, style: .continuous).fill(DesignTokens.accentTint))
     }
 
-    private func progressAyahs(_ surah: Surah) -> Int {
-        let idx = appState.state.currentChunkIndex
-        guard idx > 0 else { return 0 }
-        return surah.chunks.prefix(idx).flatMap(\.ayahIds).count
-    }
+    // MARK: Now card
 
-    private func nextAyahPreview(_ surah: Surah) -> Verse? {
-        let idx = appState.state.currentChunkIndex
-        guard idx < surah.chunks.count else { return nil }
-        guard let firstAyahId = surah.chunks[idx].ayahIds.first else { return nil }
-        return surah.verses.first { $0.id == firstAyahId }
-    }
-
-    private var statsRow: some View {
-        let lang = appState.state.language
-        return HStack(spacing: 12) {
-            StatCard(number: "\(appState.state.totalAyahsRead)", label: Localization.L("home.ayahs", lang))
-            StatCard(number: "\(appState.state.streakDays)", label: Localization.L("home.streak", lang), highlight: true)
-            StatCard(number: "\(appState.state.todayAyahsRead)", label: Localization.L("home.today", lang))
-        }
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, DesignTokens.spacingXl)
-    }
-
-    private var guardedAppsSection: some View {
-        let lang = appState.state.language
-        return VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-            Text(Localization.L("home.guarded_apps", lang))
-                .font(Font.custom("CormorantGaramond-Regular", size: 10))
-                .tracking(0.22)
-                .textCase(.uppercase)
-                .foregroundColor(DesignTokens.sectionLabel)
-                .padding(.horizontal, DesignTokens.spacingXl)
-
-            VStack(spacing: DesignTokens.spacingS) {
-                ForEach(Array(shield.selection.applicationTokens.enumerated()), id: \.offset) { _, token in
-                    AppRow(
-                        isOn: shield.isAppShieldEnabled(token),
-                        onToggle: { shield.setAppShieldEnabled(token, enabled: $0) }
-                    ) {
-                        Label(token)
-                            .labelStyle(.titleAndIcon)
-                    }
+    private func nowCard(_ surah: Surah) -> some View {
+        let goal = appState.state.goal
+        return VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Overline(text: goal.nowLabel)
+                    Text(surah.name)
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundColor(DesignTokens.ink)
+                    Text(subtitle(surah))
+                        .font(DesignTokens.callout)
+                        .foregroundColor(DesignTokens.muted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                ForEach(Array(shield.selection.categoryTokens.enumerated()), id: \.offset) { _, token in
-                    AppRow(
-                        isOn: shield.isCategoryShieldEnabled(token),
-                        onToggle: { shield.setCategoryShieldEnabled(token, enabled: $0) }
-                    ) {
-                        Label(token)
-                            .labelStyle(.titleAndIcon)
+                Spacer(minLength: 12)
+                RingProgress(value: progress(surah))
+                    .accessibilityLabel("\(Int(progress(surah) * 100)) percent")
+            }
+
+            upNext(surah)
+
+            Button(goal.actionTitle) {
+                shield.userRequestedReadingGate = true
+                shield.skipGateAfterAddingApps = false
+            }
+            .buttonStyle(PrimaryButtonStyle(enabled: shield.canStartNewGate || !shield.hasAppsToShield))
+            .disabled(shield.hasAppsToShield && !shield.canStartNewGate)
+        }
+        .card()
+    }
+
+    private func subtitle(_ surah: Surah) -> String {
+        let s = appState.state
+        switch s.goal {
+        case .review:
+            let strong = StatsService.shared.strongVerseCount(in: surah, state: s)
+            return "\(strong) of \(surah.totalVerses) verses strong"
+        case .familiar:
+            let pass = s.timesThroughSurah + 1
+            return "\(Ordinal.string(pass)) time through · \(versesRead(surah)) of \(surah.totalVerses) verses"
+        case .meaning:
+            return "\(versesRead(surah)) of \(surah.totalVerses) verses, with meaning"
+        }
+    }
+
+    private func versesRead(_ surah: Surah) -> Int {
+        let idx = min(appState.state.currentChunkIndex, surah.chunks.count)
+        return surah.chunks.prefix(idx).reduce(0) { $0 + $1.ayahIds.count }
+    }
+
+    private func progress(_ surah: Surah) -> Double {
+        guard surah.totalVerses > 0 else { return 0 }
+        if appState.state.goal == .review {
+            return Double(StatsService.shared.strongVerseCount(in: surah, state: appState.state)) / Double(surah.totalVerses)
+        }
+        return Double(versesRead(surah)) / Double(surah.totalVerses)
+    }
+
+    @ViewBuilder
+    private func upNext(_ surah: Surah) -> some View {
+        let s = appState.state
+        if s.goal == .review {
+            let due = StatsService.shared.versesDueToday(in: surah, state: s).prefix(4)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(due.isEmpty ? "Up next" : "Due today")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DesignTokens.muted)
+                HStack(spacing: 8) {
+                    if due.isEmpty, let next = StatsService.shared.nextReviewVerse(in: surah, state: s) {
+                        InfoPill(text: "Ayah \(next.id)")
+                    } else {
+                        ForEach(Array(due), id: \.id) { verse in
+                            InfoPill(text: "Ayah \(verse.id)")
+                        }
                     }
                 }
             }
-            .padding(.horizontal, DesignTokens.spacingXl)
-        }
-    }
-
-    private var simulatorPreviewSection: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
-            Text(Localization.L("home.simulator_preview", appState.state.language))
-                .font(Font.custom("CormorantGaramond-Regular", size: 11))
-                .tracking(3)
-                .textCase(.uppercase)
-                .foregroundColor(DesignTokens.secondaryText)
-                .padding(.horizontal, DesignTokens.spacingXl)
-
-            Button {
-                shield.userRequestedReadingGate = true
-                shield.skipGateAfterAddingApps = false
-            } label: {
-                HStack {
-                    Image(systemName: "book.closed")
-                    Text(Localization.L("home.view_gate_screen", appState.state.language))
-                        .font(Font.custom("CormorantGaramond-Regular", size: 16))
+        } else if let verse = nextVerse(surah) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Up next · ayah \(verse.id)")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DesignTokens.muted)
+                if (s.meaningFirst || s.goal == .meaning), let translation = verse.translation {
+                    Text(translation)
+                        .font(DesignTokens.callout)
+                        .foregroundColor(DesignTokens.inkSoft)
+                        .lineLimit(2)
+                } else {
+                    Text(verse.text)
+                        .font(DesignTokens.arabic(22))
+                        .foregroundColor(DesignTokens.inkSoft)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .environment(\.layoutDirection, .rightToLeft)
                 }
-                .foregroundColor(DesignTokens.gold)
-                .frame(maxWidth: .infinity)
-                .padding(DesignTokens.spacingL)
-                .background(DesignTokens.cardBackground)
-                .overlay(RoundedRectangle(cornerRadius: DesignTokens.radiusLg).stroke(DesignTokens.gold.opacity(0.4), lineWidth: 1))
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, DesignTokens.spacingXl)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: DesignTokens.radiusLg, style: .continuous).fill(DesignTokens.surfaceMuted))
         }
     }
 
-    private var unlockButtonSection: some View {
-        let canUnlock = shield.canStartNewGate
-        return VStack(alignment: .center, spacing: DesignTokens.spacingM) {
-            Button {
-                shield.userRequestedReadingGate = true
-                shield.skipGateAfterAddingApps = false
-            } label: {
-                Text(Localization.L("home.read_to_unlock", appState.state.language))
-                    .font(Font.custom("CormorantGaramond-Regular", size: 16))
-                    .foregroundColor(canUnlock ? .white : Color.white.opacity(0.5))
+    private func nextVerse(_ surah: Surah) -> Verse? {
+        let idx = appState.state.currentChunkIndex
+        guard idx < surah.chunks.count, let first = surah.chunks[idx].ayahIds.first else { return nil }
+        return surah.verses.first { $0.id == first }
+    }
+
+    // MARK: This week
+
+    private var weekCard: some View {
+        let days = StatsService.shared.history(days: 7, state: appState.state)
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let symbols = cal.veryShortWeekdaySymbols
+        let total = days.reduce(0, +)
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("This week")
+                    .font(DesignTokens.headline)
+                    .foregroundColor(DesignTokens.ink)
+                Spacer()
+                Text(total == 1 ? "1 verse" : "\(total) verses")
+                    .font(DesignTokens.caption)
+                    .foregroundColor(DesignTokens.muted)
+            }
+            HStack(spacing: 0) {
+                ForEach(0..<7, id: \.self) { i in
+                    let date = cal.date(byAdding: .day, value: i - 6, to: today) ?? today
+                    let weekday = cal.component(.weekday, from: date) - 1
+                    let isToday = i == 6
+                    VStack(spacing: 8) {
+                        Text(symbols[weekday])
+                            .font(.system(size: 12, weight: isToday ? .bold : .regular))
+                            .foregroundColor(isToday ? DesignTokens.ink : DesignTokens.muted)
+                        ZStack {
+                            Circle()
+                                .fill(days[i] > 0 ? DesignTokens.accent : DesignTokens.track)
+                            if days[i] > 0 {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .frame(width: 30, height: 30)
+                        .overlay(Circle().stroke(isToday ? DesignTokens.accent : .clear, lineWidth: 2).padding(-3))
+                    }
                     .frame(maxWidth: .infinity)
-                    .padding(DesignTokens.spacingL)
-                    .background(canUnlock ? DesignTokens.gold : DesignTokens.gold.opacity(0.4))
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusLg))
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(isToday ? "Today" : symbols[weekday]): \(days[i] > 0 ? "read" : "not yet")")
+                }
             }
-            .buttonStyle(.plain)
-            .disabled(!canUnlock)
-            .padding(.horizontal, DesignTokens.spacingXl)
         }
+        .card()
     }
 
-    private var remainingMinutesText: String {
-        let minutes = max(0, remainingSeconds / 60)
-        return "\(minutes) min"
+    // MARK: Apps
+
+    private var appsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Pause my apps")
+                        .font(DesignTokens.headline)
+                        .foregroundColor(DesignTokens.ink)
+                    Text(shield.hasAppsToShield
+                         ? "They open after a few verses."
+                         : "Choose apps to pause until you read.")
+                        .font(DesignTokens.caption)
+                        .foregroundColor(DesignTokens.muted)
+                }
+                Spacer()
+                Button(shield.hasAppsToShield ? "Edit" : "Choose") { showingPicker = true }
+                    .buttonStyle(TextButtonStyle())
+            }
+
+            if shield.hasAppsToShield {
+                VStack(spacing: 0) {
+                    ForEach(Array(shield.selection.applicationTokens.enumerated()), id: \.offset) { _, token in
+                        appRow(isOn: shield.isAppShieldEnabled(token),
+                               set: { shield.setAppShieldEnabled(token, enabled: $0) }) {
+                            Label(token).labelStyle(.titleAndIcon)
+                        }
+                    }
+                    ForEach(Array(shield.selection.categoryTokens.enumerated()), id: \.offset) { _, token in
+                        appRow(isOn: shield.isCategoryShieldEnabled(token),
+                               set: { shield.setCategoryShieldEnabled(token, enabled: $0) }) {
+                            Label(token).labelStyle(.titleAndIcon)
+                        }
+                    }
+                }
+            }
+        }
+        .card()
     }
+
+    private func appRow<L: View>(isOn: Bool, set: @escaping (Bool) -> Void, @ViewBuilder label: () -> L) -> some View {
+        Toggle(isOn: Binding(get: { isOn }, set: set)) {
+            label()
+                .font(DesignTokens.callout)
+                .foregroundColor(DesignTokens.ink)
+        }
+        .tint(DesignTokens.accent)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: Timer
 
     private func updateRemaining() {
         if shield.isUnlockWindowActive, let next = shield.nextLockAt {
-            let remaining = Int(next.timeIntervalSinceNow)
-            remainingSeconds = max(0, remaining)
+            remainingSeconds = max(0, Int(next.timeIntervalSinceNow))
         } else {
             remainingSeconds = 0
         }
@@ -210,13 +297,10 @@ struct HomeView: View {
 
     private func startTimer() {
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
-            DispatchQueue.main.async {
-                updateRemaining()
-            }
+        let t = Timer(timeInterval: 30, repeats: true) { _ in
+            DispatchQueue.main.async { updateRemaining() }
         }
-        if let timer {
-            RunLoop.main.add(timer, forMode: .common)
-        }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 }
