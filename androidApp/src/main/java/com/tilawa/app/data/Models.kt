@@ -31,6 +31,15 @@ data class Surah(
 )
 
 enum class Language { ENGLISH, FRENCH, ARABIC }
+
+/** Switches for parts of the app that are built but not offered right now. */
+object Features {
+    /**
+     * Pausing other apps until you read (Accessibility on Android, Screen Time on iOS). Off for now: reminders
+     * come first, and pausing returns later as an option. The service is also left out of the manifest.
+     */
+    const val APP_PAUSING = false
+}
 enum class ReadingSpeed(val secondsPerWord: Double) { SLOW(.85), NORMAL(.65), FAST(.45) }
 enum class LockDelay(val millis: Long?) {
     FIFTEEN_MINUTES(15 * 60_000L),
@@ -153,6 +162,11 @@ data class AppState(
     val wirdsCompleted: Int = 0,
     /** Tilawa Plus. Until billing is built, only switchable in debug builds. */
     val isPro: Boolean = false,
+    /** Reading reminders: every [remindEveryHours] hours between [remindFrom] and [remindUntil] (hours, 24 = midnight). */
+    val remindersOn: Boolean = true,
+    val remindEveryHours: Int = 2,
+    val remindFrom: Int = 8,
+    val remindUntil: Int = 22,
     /** Ayahs read per day (epoch day → count), last ~90 days. */
     val dailyAyahs: Map<Long, Int> = emptyMap(),
 )

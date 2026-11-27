@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.tilawa.app.MainViewModel
+import com.tilawa.app.data.Features
 import com.tilawa.app.data.ReadIn
 import com.tilawa.app.data.ReadingGoal
 import com.tilawa.app.data.ReadingSpeed
@@ -90,7 +91,7 @@ fun OnboardingScreen(vm: MainViewModel) {
         0 -> Welcome { step = 1 }
         1 -> GoalStep(vm, back = { step = 0 }) { step = 2 }
         2 -> ReadInStep(vm, back = { step = 1 }) { step = 3 }
-        3 -> AppsStep(vm, back = { step = 2 }) { step = 4 }
+        3 -> if (Features.APP_PAUSING) AppsStep(vm, back = { step = 2 }) { step = 4 } else RemindersStep(vm, back = { step = 2 }) { step = 4 }
         else -> SurahStep(vm, back = { step = 3 }, browse = { browsing = true }) { vm.completeOnboarding() }
     }
 }
@@ -108,7 +109,7 @@ private fun Welcome(next: () -> Unit) {
         Spacer(Modifier.height(28.dp))
         Text("Turn the moments you’d scroll into time with the Quran.", color = T.Ink, fontSize = 30.sp, fontWeight = FontWeight.Bold, lineHeight = 36.sp)
         Spacer(Modifier.height(12.dp))
-        Text("Each time you reach for a distracting app, Tilawa gives you a few verses first.", color = T.Muted, fontSize = 17.sp, lineHeight = 24.sp)
+        Text("A gentle reminder every few hours: two or three verses, read in under a minute.", color = T.Muted, fontSize = 17.sp, lineHeight = 24.sp)
         Spacer(Modifier.height(24.dp))
         listOf("Get familiar with a surah you love", "Keep what you’ve memorized fresh", "Read the meaning, even without Arabic").forEach {
             Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -163,7 +164,7 @@ private fun GoalStep(vm: MainViewModel, back: () -> Unit, next: () -> Unit) {
     StepScaffold(
         1,
         "What brings you to Tilawa?",
-        "This shapes what you see at each pause. You can switch anytime.",
+        "This shapes what you read at each reminder. You can switch anytime.",
         back,
         footer = { PrimaryButton("Continue", onClick = next) },
     ) {
@@ -202,7 +203,7 @@ private fun ReadInStep(vm: MainViewModel, back: () -> Unit, next: () -> Unit) {
     StepScaffold(
         2,
         "How do you read the Quran?",
-        "We’ll show that large at each pause. You can change it anytime with Aa.",
+        "We’ll show that large when you read. You can change it anytime with Aa.",
         back,
         footer = { PrimaryButton("Continue", onClick = next) },
     ) {
@@ -320,6 +321,38 @@ private fun AppsStep(vm: MainViewModel, back: () -> Unit, next: () -> Unit) {
     }
 }
 
+/** Reading reminders: how often and when, then the notification permission. */
+@Composable
+private fun RemindersStep(vm: MainViewModel, back: () -> Unit, next: () -> Unit) {
+    val permission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { next() }
+    StepScaffold(
+        3,
+        "When should we remind you?",
+        "A gentle notification with your next few verses. Read them right away, or whenever you’re ready.",
+        back,
+        footer = {
+            PrimaryButton("Turn on reminders") {
+                vm.update { it.copy(remindersOn = true) }
+                if (android.os.Build.VERSION.SDK_INT >= 33) {
+                    permission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    next()
+                }
+            }
+            PlainButton("Not now", Modifier.fillMaxWidth()) {
+                vm.update { it.copy(remindersOn = false) }
+                next()
+            }
+        },
+    ) {
+        ReminderPreview(vm)
+        Spacer(Modifier.height(4.dp))
+        ReminderOptions(vm)
+    }
+}
+
 @Composable
 private fun SurahStep(vm: MainViewModel, back: () -> Unit, browse: () -> Unit, start: () -> Unit) {
     val goal = vm.state.goal
@@ -330,8 +363,8 @@ private fun SurahStep(vm: MainViewModel, back: () -> Unit, browse: () -> Unit, s
     }
     val subtitle = when (goal) {
         ReadingGoal.FAMILIAR -> "You’ll read it in small pieces, over and over, until it feels familiar."
-        ReadingGoal.REVIEW -> "Each pause asks you to recall one verse. Verses you know well come back less often."
-        ReadingGoal.MEANING -> "Each pause continues where you left off, with the English meaning first."
+        ReadingGoal.REVIEW -> "Each time asks you to recall one verse. Verses you know well come back less often."
+        ReadingGoal.MEANING -> "Each time continues where you left off, with the English meaning first."
     }
     StepScaffold(4, title, subtitle, back, footer = { PrimaryButton("Start", onClick = start) }) {
         val ids = Suggested.starters.map { it.first }.let { if (vm.state.selectedSurahId in it) it else listOf(vm.state.selectedSurahId) + it }
@@ -342,7 +375,7 @@ private fun SurahStep(vm: MainViewModel, back: () -> Unit, browse: () -> Unit, s
         PlainButton("Browse all 114 surahs", onClick = browse)
         if (goal != ReadingGoal.REVIEW) {
             Spacer(Modifier.height(4.dp))
-            Text("How long is each pause?", color = T.Ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text("How long is each reading?", color = T.Ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Segmented(
                 listOf(ReadingSpeed.FAST to "Short", ReadingSpeed.NORMAL to "Medium", ReadingSpeed.SLOW to "Long"),
                 vm.state.readingSpeed,

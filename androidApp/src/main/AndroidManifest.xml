@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <queries>
         <intent>
@@ -33,18 +34,21 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name=".blocking.AppBlockAccessibilityService"
-            android:description="@string/accessibility_service_description"
-            android:exported="true"
-            android:label="@string/accessibility_service_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+        <receiver
+            android:name=".reminders.ReminderReceiver"
+            android:exported="false">
             <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
+                <action android:name="com.tilawa.app.REMIND" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
+        </receiver>
+
+        <!--
+            App pausing (AppBlockAccessibilityService) is left out for now: reminders come first, and Google Play
+            only allows Accessibility services for accessibility. To bring it back, restore the <service> entry
+            from git history and set Features.APP_PAUSING = true.
+        -->
     </application>
 </manifest>

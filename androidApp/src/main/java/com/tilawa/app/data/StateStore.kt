@@ -40,6 +40,10 @@ class StateStore(context: Context) {
             wirdProgress = decodeWirdProgress(prefs.getString("wirdProgress", null)),
             wirdsCompleted = prefs.getInt("wirdsCompleted", 0),
             isPro = prefs.getBoolean("isPro", false),
+            remindersOn = prefs.getBoolean("remindersOn", true),
+            remindEveryHours = prefs.getInt("remindEveryHours", 2),
+            remindFrom = prefs.getInt("remindFrom", 8),
+            remindUntil = prefs.getInt("remindUntil", 22),
         )
     }
 
@@ -71,6 +75,10 @@ class StateStore(context: Context) {
             .putString("wirdProgress", encodeWirdProgress(state.wirdProgress))
             .putInt("wirdsCompleted", state.wirdsCompleted)
             .putBoolean("isPro", state.isPro)
+            .putBoolean("remindersOn", state.remindersOn)
+            .putInt("remindEveryHours", state.remindEveryHours)
+            .putInt("remindFrom", state.remindFrom)
+            .putInt("remindUntil", state.remindUntil)
             .apply()
     }
 

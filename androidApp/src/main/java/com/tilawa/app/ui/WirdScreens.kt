@@ -77,7 +77,7 @@ fun WirdCard(vm: MainViewModel, onSetUp: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             Text("Read Al-Kahf every Friday", color = T.Ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Add the surahs you read regularly. On their day, your pauses go through them, a few verses at a time.",
+                "Add the surahs you read regularly. On their day, your reminders go through them, a few verses at a time.",
                 color = T.Muted, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 4.dp),
             )
             Spacer(Modifier.height(16.dp))
@@ -139,7 +139,7 @@ fun WirdCard(vm: MainViewModel, onSetUp: () -> Unit) {
             }
         }
         Text(
-            "Your pauses today go through this first. Tap Keep reading to finish it in one sitting.",
+            "Reminders today go through this first. Tap Keep reading to finish it in one sitting.",
             color = T.Muted, fontSize = 12.sp, lineHeight = 16.sp,
         )
     }
@@ -247,7 +247,7 @@ fun WirdEditorSheet(vm: MainViewModel, editing: WirdItem?, dismiss: () -> Unit) 
             when (step) {
                 EditorStep.PRESETS -> {
                     Text("Add to my wird", color = T.Ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Text("Your pauses go through it on its days.", color = T.Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 14.dp))
+                    Text("Reminders go through it on its days.", color = T.Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 14.dp))
                     val taken = state.wird.map { it.surahId }.toSet()
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Wird.presets.filter { it.surahId !in taken }.forEach { preset ->

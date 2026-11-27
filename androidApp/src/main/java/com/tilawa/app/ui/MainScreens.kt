@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.tilawa.app.MainViewModel
+import com.tilawa.app.data.Features
 import com.tilawa.app.data.Language
 import com.tilawa.app.data.LockDelay
 import com.tilawa.app.data.ReadIn
@@ -119,7 +120,7 @@ fun TodayScreen(vm: MainViewModel) {
             if (state.streakDays > 0) StreakPill("${state.streakDays}", "${state.streakDays}-day streak")
         }
 
-        if (unlockLeft > 0) {
+        if (Features.APP_PAUSING && unlockLeft > 0) {
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(T.AccentTint).padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -135,9 +136,10 @@ fun TodayScreen(vm: MainViewModel) {
         if (wirdDue) WirdCard(vm) { wirdSheet = true }
         if (surah != null) NowCard(vm, surah)
         if (!wirdDue) WirdCard(vm) { wirdSheet = true }
+        ReminderCard(vm)
         WeekCard(vm)
 
-        Card {
+        if (Features.APP_PAUSING) Card {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Pause my apps", color = T.Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
@@ -530,8 +532,24 @@ fun SettingsScreen(vm: MainViewModel) {
             }
         }
 
-        SectionLabel("Paused apps")
+        SectionLabel("Reminders")
         Card(padding = 0.dp, radius = 20.dp) {
+            ToggleRow("Reading reminders", "A few verses every few hours", state.remindersOn) { v -> vm.update { it.copy(remindersOn = v) } }
+            if (state.remindersOn) {
+                Hairline()
+                Column(Modifier.padding(16.dp)) { ReminderOptions(vm) }
+                if (!androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                    Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) { NotificationsBlocked() }
+                }
+            }
+            if ((context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+                Hairline()
+                SettingsRow("Send a test reminder", "Test builds only: shows one now") { vm.testReminder() }
+            }
+        }
+
+        if (Features.APP_PAUSING) SectionLabel("Paused apps")
+        if (Features.APP_PAUSING) Card(padding = 0.dp, radius = 20.dp) {
             SettingsRow("Choose apps", "${vm.guardedPackages.size} selected") { showApps = true }
             Hairline()
             SettingsRow(

@@ -12,6 +12,7 @@ import com.tilawa.app.blocking.AppBlockAccessibilityService
 import com.tilawa.app.blocking.AppGuardRepository
 import com.tilawa.app.data.AppState
 import com.tilawa.app.data.DoneInfo
+import com.tilawa.app.data.Features
 import com.tilawa.app.data.GuardedApp
 import com.tilawa.app.data.QuranRepository
 import com.tilawa.app.data.ReadIn
@@ -22,6 +23,7 @@ import com.tilawa.app.data.Surah
 import com.tilawa.app.data.Verse
 import com.tilawa.app.data.Wird
 import com.tilawa.app.data.WirdItem
+import com.tilawa.app.reminders.Reminders
 
 /** One page of reading in a pause: a few verses of the main surah, or of a wird surah. */
 data class Segment(val surah: Surah, val wirdId: Long?, val verses: List<Verse>)
@@ -52,9 +54,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val surah: Surah? get() = quran.surah(state.selectedSurahId)
 
     fun update(transform: (AppState) -> AppState) {
+        val before = state
         state = transform(state)
         stateStore.save(state)
         writePauseText()
+        val reminderChanged = before.remindersOn != state.remindersOn || before.remindEveryHours != state.remindEveryHours ||
+            before.remindFrom != state.remindFrom || before.remindUntil != state.remindUntil ||
+            before.hasCompletedOnboarding != state.hasCompletedOnboarding
+        if (reminderChanged) rescheduleReminders()
+    }
+
+    /** When the next reminder comes (epoch millis), or null when they're off. */
+    var nextReminderAt by mutableStateOf<Long?>(null)
+        private set
+
+    fun rescheduleReminders() {
+        val app = getApplication<Application>()
+        Reminders.reschedule(app, state)
+        nextReminderAt = Reminders.nextTime(app)
+    }
+
+    fun refreshNextReminder() {
+        val app = getApplication<Application>()
+        Reminders.ensureScheduled(app)
+        nextReminderAt = Reminders.nextTime(app)
+    }
+
+    /** Debug builds: shows a reminder right away. */
+    fun testReminder() {
+        val app = getApplication<Application>()
+        kotlin.concurrent.thread { Reminders.post(app) }
     }
 
     fun completeOnboarding() = update { it.copy(hasCompletedOnboarding = true, isFirstLaunch = false) }
@@ -224,7 +253,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun finish(info: DoneInfo) {
-        appGuard.beginUnlock(targetApp, state.lockDelay.millis)
+        if (Features.APP_PAUSING) appGuard.beginUnlock(targetApp, state.lockDelay.millis)
+        // Just read: the next reminder comes a full interval from now, and the current one is gone.
+        val app = getApplication<Application>()
+        Reminders.clear(app)
+        rescheduleReminders()
         done = info
     }
 

@@ -506,7 +506,7 @@ private fun DoneScreen(vm: MainViewModel, info: DoneInfo) {
     val appName = target?.let { vm.appLabel(it) }
     val ms = vm.state.lockDelay.millis
     val unlock = when {
-        target == null -> "Well done. Your next pause will pick up from here."
+        target == null -> "Well done. Your next reminder picks up from here."
         ms == null -> "$appName is open."
         else -> {
             val minutes = ms / 60_000
