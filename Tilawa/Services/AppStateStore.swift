@@ -54,6 +54,149 @@ final class AppStateStore: ObservableObject {
     func reloadFromStorage() {
         state = StatsService.shared.loadState()
     }
+
+    // MARK: - Which wird the next pause reads
+
+    enum GateWird: Equatable {
+        /// Pauses from a paused app or its notification: today's wird first, if one is due.
+        case auto
+        /// "Read now" on Today: the main surah.
+        case none
+        /// A wird card's Read button.
+        case item(Int)
+    }
+
+    /// Set just before a pause opens; back to `.auto` once it closes.
+    @Published var gateWird: GateWird = .auto
+
+    /// The wird item the pause about to open reads, or nil for the main surah.
+    func resolveGateWird() -> Int? {
+        switch gateWird {
+        case .none: return nil
+        case .item(let id): return id
+        case .auto: return Wird.current(state)?.id
+        }
+    }
+
+    // MARK: - Reading sessions (a pause, plus any "Keep reading")
+
+    private var quran: QuranService { QuranService.shared }
+
+    /// The first page of a pause.
+    func firstSegment(wirdId: Int?) -> ReadingSegment? {
+        if let wirdId, let page = wirdSegment(wirdId, after: nil) { return page }
+        return mainSegment(chunkIndex: state.currentChunkIndex)
+    }
+
+    /// What "Keep reading" shows after `after`: the rest of that wird surah, then the next wird due today,
+    /// then the main surah (not in Muraja'ah, which reviews one verse at a time).
+    func nextSegment(after: ReadingSegment) -> ReadingSegment? {
+        let lastId = after.verses.last?.id ?? 0
+        if let wirdId = after.wirdId {
+            if let page = wirdSegment(wirdId, after: lastId) { return page }
+            for item in Wird.dueToday(state) where item.id != wirdId {
+                if let page = wirdSegment(item.id, after: nil) { return page }
+            }
+        }
+        if state.goal == .review { return nil }
+        guard let main = quran.surah(id: state.selectedSurahId), !main.chunks.isEmpty else { return nil }
+        if after.wirdId != nil { return mainSegment(chunkIndex: state.currentChunkIndex) }
+        let index = main.chunks.firstIndex { $0.ayahIds.contains(lastId) }
+        return mainSegment(chunkIndex: index.map { ($0 + 1) % main.chunks.count } ?? state.currentChunkIndex)
+    }
+
+    /// Counts `segment` as read. Returns the surah name if this finished it (a pass, or today's wird).
+    func recordSegment(_ segment: ReadingSegment) -> String? {
+        if let wirdId = segment.wirdId {
+            guard let item = state.wird.first(where: { $0.id == wirdId }) else { return nil }
+            var updated = state
+            let finished = Wird.record(&updated, item: item, surah: segment.surah, verses: segment.verses)
+            state = updated
+            return finished ? segment.surah.name : nil
+        }
+        let finishedPass = recordRead(ayahCount: segment.verses.count, surah: segment.surah)
+        return finishedPass ? segment.surah.name : nil
+    }
+
+    /// What the done screen shows after `read` pages (already recorded).
+    func doneInfo(read: [ReadingSegment], finished: [String]) -> DoneInfo? {
+        guard let last = read.last, let lastVerse = last.verses.last else { return nil }
+        let count = read.reduce(0) { $0 + $1.verses.count }
+        let chip: String
+        if let name = finished.last {
+            chip = "Finished \(name)"
+        } else if let wirdId = last.wirdId {
+            let upTo = state.wird.first { $0.id == wirdId }.map { Wird.upTo(state, $0) } ?? lastVerse.id
+            chip = "\(last.surah.name) \(upTo)/\(last.surah.totalVerses)"
+        } else if state.goal == .familiar {
+            chip = "\(last.surah.name) · \(Ordinal.string(state.timesThroughSurah + 1)) time through"
+        } else {
+            chip = "\(last.surah.name) \(lastVerse.id)/\(last.surah.totalVerses)"
+        }
+        let keep = last.verses.last(where: { $0.translation != nil }) ?? lastVerse
+        return DoneInfo(
+            headline: count == 1 ? "1 verse read" : "\(count) verses read",
+            chip: chip,
+            cardLabel: "Take with you",
+            cardText: keep.translation.map { "“\($0)”" } ?? keep.text,
+            cardTextIsArabic: keep.translation == nil,
+            cardRef: "\(last.surah.name) \(last.surah.id):\(keep.id)"
+        )
+    }
+
+    private func mainSegment(chunkIndex: Int) -> ReadingSegment? {
+        guard let main = quran.surah(id: state.selectedSurahId), !main.chunks.isEmpty else { return nil }
+        let chunk = main.chunks[min(max(0, chunkIndex), main.chunks.count - 1)]
+        let verses = chunk.ayahIds.compactMap { id in main.verses.first { $0.id == id } }
+        return verses.isEmpty ? nil : ReadingSegment(surah: main, wirdId: nil, verses: verses)
+    }
+
+    /// Next page of a wird surah, after ayah `after` (or after today's progress when nil).
+    private func wirdSegment(_ id: Int, after: Int?) -> ReadingSegment? {
+        guard let item = state.wird.first(where: { $0.id == id }),
+              let surah = quran.surah(id: item.surahId) else { return nil }
+        let verses = Wird.nextVerses(surah, after: max(after ?? 0, Wird.upTo(state, item)))
+        return verses.isEmpty ? nil : ReadingSegment(surah: surah, wirdId: id, verses: verses)
+    }
+
+    // MARK: - Wird
+
+    func addWird(surahId: Int, weekdays: Set<Int>, everyDays: Int) {
+        guard Wird.canAdd(state) else { return }
+        let id = (state.wird.map(\.id).max() ?? 0) + 1
+        state.wird.append(WirdItem(id: id, surahId: surahId, weekdays: weekdays, everyDays: everyDays))
+    }
+
+    func updateWird(_ item: WirdItem) {
+        guard let i = state.wird.firstIndex(where: { $0.id == item.id }) else { return }
+        state.wird[i] = item
+    }
+
+    func removeWird(id: Int) {
+        state.wird.removeAll { $0.id == id }
+        state.wirdProgress[id] = nil
+    }
+
+    func moveWird(id: Int, by offset: Int) {
+        guard let i = state.wird.firstIndex(where: { $0.id == id }) else { return }
+        let j = min(max(0, i + offset), state.wird.count - 1)
+        guard i != j else { return }
+        var list = state.wird
+        list.insert(list.remove(at: i), at: j)
+        state.wird = list
+    }
+}
+
+/// One page of reading in a pause: a few verses of the main surah, or of a wird surah.
+struct ReadingSegment: Equatable {
+    let surah: Surah
+    let wirdId: Int?
+    let verses: [Verse]
+
+    /// Identifies the page (for resetting the timer and scroll position).
+    var key: String { "\(surah.id)-\(wirdId ?? 0)-\(verses.first?.id ?? 0)" }
+
+    static func == (a: ReadingSegment, b: ReadingSegment) -> Bool { a.key == b.key }
 }
 
 /// What the system shield (a separate extension) needs to know to word its message:
@@ -70,6 +213,15 @@ enum ShieldContext {
         defaults.set(state.goal.rawValue, forKey: goalKey)
         let quran = QuranService.shared
         if quran.surahs.isEmpty { quran.load() }
+        // A wird due today comes first: the shield says so.
+        if let item = Wird.current(state, quran: quran), let wirdSurah = quran.surah(id: item.surahId) {
+            let verses = Wird.nextVerses(wirdSurah, after: Wird.upTo(state, item))
+            let count = verses.count == 1 ? "1 verse" : "\(verses.count) verses"
+            defaults.set(ReadingGoal.familiar.rawValue, forKey: goalKey)
+            defaults.set(wirdSurah.name, forKey: surahNameKey)
+            defaults.set("Today’s wird: read \(count) of \(wirdSurah.name) to open it.", forKey: detailKey)
+            return
+        }
         guard let surah = quran.surah(id: state.selectedSurahId) else { return }
         defaults.set(surah.name, forKey: surahNameKey)
 

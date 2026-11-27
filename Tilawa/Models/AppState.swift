@@ -115,6 +115,57 @@ struct ReviewItem: Codable, Equatable {
     var isStrong: Bool { stage >= 3 && timesReviewed >= 4 }
 }
 
+/// One surah in the person's wird (الورد) and the days it's read, e.g. Al-Kahf on Fridays.
+struct WirdItem: Codable, Equatable, Identifiable {
+    var id: Int
+    var surahId: Int
+    /// 1 = Monday … 7 = Sunday. Used when `everyDays` is 0.
+    var weekdays: Set<Int> = []
+    /// Every N days from `startDay` (1 = every day); 0 means use `weekdays`.
+    var everyDays: Int = 0
+    var startDay: Date = Calendar.current.startOfDay(for: Date())
+
+    /// Monday-first weekday number (1…7) of a date.
+    static func weekday(of date: Date) -> Int {
+        (Calendar.current.component(.weekday, from: date) + 5) % 7 + 1
+    }
+
+    func isDue(on day: Date) -> Bool {
+        let cal = Calendar.current
+        let day = cal.startOfDay(for: day)
+        if everyDays > 0 {
+            let diff = cal.dateComponents([.day], from: cal.startOfDay(for: startDay), to: day).day ?? 0
+            return diff >= 0 && diff % everyDays == 0
+        }
+        return weekdays.contains(Self.weekday(of: day))
+    }
+
+    static func dayName(_ weekday: Int) -> String {
+        // Calendar symbols start on Sunday.
+        Calendar(identifier: .gregorian).weekdaySymbols[weekday % 7]
+    }
+
+    /// "Every Friday", "Every day", "Mon and Thu", "Every 2 days".
+    var scheduleLabel: String {
+        if everyDays > 0 { return everyDays == 1 ? "Every day" : "Every \(everyDays) days" }
+        if weekdays.count == 7 { return "Every day" }
+        let names = weekdays.sorted().map { Self.dayName($0) }
+        switch names.count {
+        case 0: return "No days chosen"
+        case 1: return "Every \(names[0])"
+        default:
+            let short = names.map { String($0.prefix(3)) }
+            return short.dropLast().joined(separator: ", ") + " and " + short.last!
+        }
+    }
+}
+
+/// How far into a wird surah the person got on `day` (highest ayah read).
+struct WirdProgress: Codable, Equatable {
+    var day: Date
+    var upTo: Int
+}
+
 struct AppState: Codable {
     var selectedSurahId: Int = 67        // Al-Mulk default
     var currentChunkIndex: Int = 0
@@ -145,6 +196,13 @@ struct AppState: Codable {
     var totalReviews: Int = 0
     /// Calendar days (start of day) on which the person read, for the Progress heatmap: ayahs read that day.
     var dailyAyahs: [Date: Int] = [:]
+    /// The wird, in reading order.
+    var wird: [WirdItem] = []
+    /// Today's progress per wird item id; older days are ignored.
+    var wirdProgress: [Int: WirdProgress] = [:]
+    var wirdsCompleted: Int = 0
+    /// Tilawa Plus. Until purchases are built, only switchable in debug builds.
+    var isPro: Bool = false
 
     init() {}
 
@@ -154,7 +212,8 @@ struct AppState: Codable {
              streakDays, longestStreak, isFirstLaunch, language, readingSpeed, showTransliteration,
              hasCompletedOnboarding, goal, readIn, showArabic, showMeaning,
              timesThroughSurah, surahsCompleted,
-             reviewItems, totalReviews, dailyAyahs
+             reviewItems, totalReviews, dailyAyahs,
+             wird, wirdProgress, wirdsCompleted, isPro
     }
 
     /// Keys only read from older saved state.
@@ -188,5 +247,9 @@ struct AppState: Codable {
         reviewItems = try c.decodeIfPresent([Int: ReviewItem].self, forKey: .reviewItems) ?? [:]
         totalReviews = try c.decodeIfPresent(Int.self, forKey: .totalReviews) ?? 0
         dailyAyahs = try c.decodeIfPresent([Date: Int].self, forKey: .dailyAyahs) ?? [:]
+        wird = try c.decodeIfPresent([WirdItem].self, forKey: .wird) ?? []
+        wirdProgress = try c.decodeIfPresent([Int: WirdProgress].self, forKey: .wirdProgress) ?? [:]
+        wirdsCompleted = try c.decodeIfPresent(Int.self, forKey: .wirdsCompleted) ?? 0
+        isPro = try c.decodeIfPresent(Bool.self, forKey: .isPro) ?? false
     }
 }

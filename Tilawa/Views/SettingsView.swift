@@ -9,6 +9,8 @@ struct SettingsView: View {
     @State private var showResetConfirmation = false
     @State private var simulatorAlert = false
     @State private var languageSectionExpanded = false
+    /// The wird sheet: nil = closed; `.some(nil)` = adding; `.some(item)` = editing it.
+    @State private var wirdEditor: WirdEditorTarget?
 
     private let capsFont = Font.system(size: 13, weight: .semibold)
     private let sectionLabelFont = Font.system(size: 12, weight: .semibold)
@@ -25,6 +27,7 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: DesignTokens.spacing3xl) {
+                    wirdSection
                     readingSection
                     guardedAppsSection
                     lockScheduleSection
@@ -40,6 +43,9 @@ struct SettingsView: View {
         .background(DesignTokens.appBackground)
         .sheet(isPresented: $showAddAppSheet) {
             addAppSheetContent
+        }
+        .sheet(item: $wirdEditor) { target in
+            WirdEditorSheet(appState: appState, editing: target.item)
         }
         .confirmationDialog(Localization.L("settings.reset_confirm_title", lang), isPresented: $showResetConfirmation, titleVisibility: .visible) {
             Button(role: .destructive) {
@@ -158,6 +164,19 @@ struct SettingsView: View {
             .padding(DesignTokens.spacingL)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - My wird
+
+    private var wirdSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
+            Text("My wird")
+                .font(sectionLabelFont)
+                .tracking(0.22)
+                .textCase(.uppercase)
+                .foregroundColor(DesignTokens.sectionLabel)
+            WirdSettingsList(appState: appState) { wirdEditor = WirdEditorTarget(item: $0) }
+        }
     }
 
     // MARK: - Section 3 — Reading
@@ -654,4 +673,10 @@ extension Language {
 
 #Preview {
     SettingsView(appState: AppStateStore(), shield: ShieldService.shared)
+}
+
+/// Which wird item the Settings sheet edits (nil item = adding a new one).
+struct WirdEditorTarget: Identifiable {
+    let item: WirdItem?
+    var id: Int { item?.id ?? -1 }
 }

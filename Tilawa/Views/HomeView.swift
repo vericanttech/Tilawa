@@ -9,6 +9,7 @@ struct HomeView: View {
     @State private var remainingSeconds: Int = 0
     @State private var timer: Timer?
     @State private var showingPicker = false
+    @State private var showingWirdSheet = false
 
     private let quran = QuranService.shared
     private var surah: Surah? { quran.surah(id: appState.state.selectedSurahId) }
@@ -18,7 +19,11 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
                 if remainingSeconds > 0 { unlockBanner }
+                // A wird due today comes first: it's what pauses read today.
+                let wirdDue = !Wird.dueToday(appState.state).isEmpty
+                if wirdDue { WirdCard(appState: appState, shield: shield) { showingWirdSheet = true } }
                 if let surah { nowCard(surah) }
+                if !wirdDue { WirdCard(appState: appState, shield: shield) { showingWirdSheet = true } }
                 weekCard
                 appsCard
             }
@@ -28,6 +33,7 @@ struct HomeView: View {
         }
         .background(DesignTokens.mist.ignoresSafeArea())
         .familyActivityPicker(isPresented: $showingPicker, selection: $shield.selection)
+        .sheet(isPresented: $showingWirdSheet) { WirdEditorSheet(appState: appState, editing: nil) }
         .onChange(of: shield.selection) { _ in
             shield.saveSelection()
             shield.applyShield()
@@ -101,6 +107,7 @@ struct HomeView: View {
             upNext(surah)
 
             Button(goal.actionTitle) {
+                appState.gateWird = .none
                 shield.userRequestedReadingGate = true
                 shield.skipGateAfterAddingApps = false
             }
@@ -307,5 +314,516 @@ struct HomeView: View {
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t
+    }
+}
+
+// MARK: - Wird (الورد)
+
+/// Today's wird: what's due, how far along, and a button to read it now.
+struct WirdCard: View {
+    @ObservedObject var appState: AppStateStore
+    @ObservedObject var shield: ShieldService
+    let onSetUp: () -> Void
+
+    private let quran = QuranService.shared
+
+    var body: some View {
+        let state = appState.state
+        let items = Wird.activeItems(state)
+        if items.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Overline(text: "My wird")
+                Text("Read Al-Kahf every Friday")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(DesignTokens.ink)
+                Text("Add the surahs you read regularly. On their day, your pauses go through them, a few verses at a time.")
+                    .font(.system(size: 14))
+                    .foregroundColor(DesignTokens.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Set up my wird", action: onSetUp)
+                    .buttonStyle(SoftButtonStyle(height: 48))
+                    .padding(.top, 8)
+            }
+            .card()
+        } else {
+            let due = Wird.dueToday(state)
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Overline(text: due.isEmpty ? "My wird" : "Today’s wird")
+                    Spacer()
+                    Button("Edit", action: onSetUp)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(DesignTokens.accent)
+                        .buttonStyle(.plain)
+                }
+                if due.isEmpty {
+                    nothingDue(items)
+                } else {
+                    ForEach(Array(due.enumerated()), id: \.element.id) { index, item in
+                        if index > 0 { Rectangle().fill(DesignTokens.hairline).frame(height: 1) }
+                        row(item)
+                    }
+                    Text("Your pauses today go through this first. Tap Keep reading to finish it in one sitting.")
+                        .font(.system(size: 12))
+                        .foregroundColor(DesignTokens.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .card()
+        }
+    }
+
+    private func nothingDue(_ items: [WirdItem]) -> some View {
+        let next = items.compactMap { item in Wird.nextDueDay(item).map { (item, $0) } }.min { $0.1 < $1.1 }
+        return VStack(alignment: .leading, spacing: 2) {
+            Text("Nothing due today")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(DesignTokens.ink)
+            if let next, let surah = quran.surah(id: next.0.surahId) {
+                Text("Next: \(surah.name) · \(dayName(next.1))")
+                    .font(.system(size: 14))
+                    .foregroundColor(DesignTokens.muted)
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private func row(_ item: WirdItem) -> some View {
+        if let surah = quran.surah(id: item.surahId) {
+            let upTo = min(Wird.upTo(appState.state, item), surah.totalVerses)
+            let done = upTo >= surah.totalVerses
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text(surah.name)
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(DesignTokens.ink)
+                        Text(surah.nameArabic)
+                            .font(DesignTokens.arabic(16))
+                            .foregroundColor(DesignTokens.muted)
+                    }
+                    Text(done ? "Done for today · \(surah.totalVerses) verses" : "\(upTo) of \(surah.totalVerses) verses")
+                        .font(.system(size: 13))
+                        .foregroundColor(DesignTokens.muted)
+                    LineProgress(value: Double(upTo) / Double(max(1, surah.totalVerses)))
+                }
+                if done {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(DesignTokens.accent))
+                        .accessibilityLabel("Done")
+                } else {
+                    let canOpen = shield.canStartNewGate || !shield.hasAppsToShield
+                    Button(upTo == 0 ? "Read" : "Continue") {
+                        appState.gateWird = .item(item.id)
+                        shield.userRequestedReadingGate = true
+                        shield.skipGateAfterAddingApps = false
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(canOpen ? DesignTokens.accent : DesignTokens.outline))
+                    .buttonStyle(.plain)
+                    .disabled(!canOpen)
+                }
+            }
+            .padding(.vertical, 12)
+        }
+    }
+
+    private func dayName(_ date: Date) -> String {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        if cal.dateComponents([.day], from: today, to: date).day == 1 { return "tomorrow" }
+        return WirdItem.dayName(WirdItem.weekday(of: date))
+    }
+}
+
+/// "My wird" in Settings: the list, in reading order, plus adding and Tilawa Plus.
+struct WirdSettingsList: View {
+    @ObservedObject var appState: AppStateStore
+    /// Called with nil to add, or the item to edit.
+    let onEdit: (WirdItem?) -> Void
+
+    private let quran = QuranService.shared
+
+    var body: some View {
+        let state = appState.state
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(state.wird.enumerated()), id: \.element.id) { index, item in
+                    let surah = quran.surah(id: item.surahId)
+                    let locked = !state.isPro && index >= Wird.freeLimit
+                    if index > 0 { Rectangle().fill(DesignTokens.cardBorder).frame(height: 1) }
+                    Button { onEdit(item) } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(surah?.name ?? "")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(locked ? DesignTokens.muted : DesignTokens.ink)
+                                Text(locked ? "\(item.scheduleLabel) · needs Tilawa Plus" : item.scheduleLabel)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(DesignTokens.muted)
+                            }
+                            Spacer()
+                            Text(surah?.nameArabic ?? "")
+                                .font(DesignTokens.arabic(20))
+                                .foregroundColor(locked ? DesignTokens.outline : DesignTokens.accent)
+                        }
+                        .padding(DesignTokens.spacingL)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                if !state.wird.isEmpty { Rectangle().fill(DesignTokens.cardBorder).frame(height: 1) }
+                Button { onEdit(nil) } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Add to my wird")
+                            .font(.system(size: 16, weight: .semibold))
+                        Spacer()
+                        if !Wird.canAdd(state) { PlusBadge() }
+                    }
+                    .foregroundColor(DesignTokens.accent)
+                    .padding(DesignTokens.spacingL)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if state.wird.count > 1 {
+                    Text("On a day with more than one, they’re read in this order. Open one to move it.")
+                        .font(.system(size: 12))
+                        .foregroundColor(DesignTokens.muted)
+                        .padding(.horizontal, DesignTokens.spacingL)
+                        .padding(.bottom, 14)
+                }
+            }
+            .background(DesignTokens.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusLg))
+
+            #if DEBUG
+            // Purchases aren't built yet: lets us try Plus on test builds only.
+            Toggle(isOn: Binding(get: { appState.state.isPro }, set: { appState.state.isPro = $0 })) {
+                Text("Tilawa Plus (test builds only)")
+                    .font(.system(size: 14))
+                    .foregroundColor(DesignTokens.ink)
+            }
+            .tint(DesignTokens.accent)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DesignTokens.streakTint))
+            #endif
+        }
+    }
+}
+
+struct PlusBadge: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "star.fill")
+                .font(.system(size: 10, weight: .bold))
+            Text("Plus")
+                .font(.system(size: 12, weight: .bold))
+        }
+        .foregroundColor(DesignTokens.streak)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(DesignTokens.streakTint))
+    }
+}
+
+/// Adds a surah to the wird (presets or any surah, then its days), or edits one when `editing` is set.
+struct WirdEditorSheet: View {
+    @ObservedObject var appState: AppStateStore
+    let editing: WirdItem?
+
+    @Environment(\.dismiss) private var dismiss
+    private enum Step { case presets, surahs, schedule }
+    @State private var step: Step = .presets
+    @State private var surahId = 18
+    @State private var byWeekday = true
+    @State private var weekdays: Set<Int> = [5]
+    @State private var everyDays = 2
+    @State private var query = ""
+
+    private let quran = QuranService.shared
+
+    init(appState: AppStateStore, editing: WirdItem?) {
+        self.appState = appState
+        self.editing = editing
+        if let editing {
+            _step = State(initialValue: .schedule)
+            _surahId = State(initialValue: editing.surahId)
+            _byWeekday = State(initialValue: editing.everyDays == 0)
+            _weekdays = State(initialValue: editing.everyDays == 0 ? editing.weekdays : [5])
+            _everyDays = State(initialValue: editing.everyDays > 0 ? editing.everyDays : 2)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if editing == nil && !Wird.canAdd(appState.state) {
+                upsell
+            } else {
+                switch step {
+                case .presets: presets
+                case .surahs: surahList
+                case .schedule: schedule
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .background(DesignTokens.surface.ignoresSafeArea())
+    }
+
+    // MARK: Steps
+
+    private var presets: some View {
+        let taken = Set(appState.state.wird.map(\.surahId))
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Add to my wird")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(DesignTokens.ink)
+            Text("Your pauses go through it on its days.")
+                .font(.system(size: 14))
+                .foregroundColor(DesignTokens.muted)
+                .padding(.bottom, 4)
+            ForEach(Wird.presets.filter { !taken.contains($0.surahId) }, id: \.surahId) { preset in
+                if let surah = quran.surah(id: preset.surahId) {
+                    Button {
+                        appState.addWird(surahId: preset.surahId, weekdays: preset.weekdays, everyDays: preset.everyDays)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(preset.note)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(DesignTokens.ink)
+                                Text("\(surah.totalVerses) verses")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(DesignTokens.muted)
+                            }
+                            Spacer()
+                            Text(surah.nameArabic)
+                                .font(DesignTokens.arabic(20))
+                                .foregroundColor(DesignTokens.accent)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(DesignTokens.surfaceMuted))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Button("Choose another surah") { step = .surahs }
+                .buttonStyle(TextButtonStyle())
+        }
+    }
+
+    private var surahList: some View {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        let list = q.isEmpty ? quran.surahs : quran.surahs.filter {
+            $0.name.localizedCaseInsensitiveContains(q) || String($0.id) == q || $0.nameArabic.contains(q)
+        }
+        return VStack(alignment: .leading, spacing: 8) {
+            back("Choose a surah") { step = .presets }
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundColor(DesignTokens.muted)
+                TextField("Search surahs", text: $query)
+                    .textInputAutocapitalization(.never)
+                    .disableAutocorrection(true)
+            }
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DesignTokens.track))
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(list) { surah in
+                        Button {
+                            surahId = surah.id
+                            step = .schedule
+                        } label: {
+                            HStack {
+                                Text("\(surah.id)")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(DesignTokens.muted)
+                                    .frame(width: 36, alignment: .leading)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(surah.name)
+                                        .font(.system(size: 16))
+                                        .foregroundColor(DesignTokens.ink)
+                                    Text("\(surah.totalVerses) verses")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(DesignTokens.muted)
+                                }
+                                Spacer()
+                                Text(surah.nameArabic)
+                                    .font(DesignTokens.arabic(18))
+                                    .foregroundColor(DesignTokens.mutedStrong)
+                            }
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private var schedule: some View {
+        let surah = quran.surah(id: surahId)
+        let valid = !byWeekday || !weekdays.isEmpty
+        return ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 14) {
+                if editing == nil {
+                    back(surah?.name ?? "") { step = .surahs }
+                } else {
+                    Text(surah?.name ?? "")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(DesignTokens.ink)
+                }
+                Text("When do you read it?")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(DesignTokens.ink)
+                TilawaSegmented(options: [(true, "On certain days"), (false, "Every few days")], selection: $byWeekday)
+                if byWeekday {
+                    weekdayPicker
+                    Text(weekdays.count == 7 ? "Every day" : WirdItem(id: 0, surahId: 0, weekdays: weekdays).scheduleLabel)
+                        .font(.system(size: 13))
+                        .foregroundColor(DesignTokens.muted)
+                } else {
+                    HStack(spacing: 12) {
+                        Text("Every").font(.system(size: 16)).foregroundColor(DesignTokens.ink)
+                        stepper("minus", "Fewer days") { everyDays = max(1, everyDays - 1) }
+                        Text("\(everyDays)")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(DesignTokens.ink)
+                            .frame(width: 44)
+                        stepper("plus", "More days") { everyDays = min(14, everyDays + 1) }
+                        Text(everyDays == 1 ? "day" : "days").font(.system(size: 16)).foregroundColor(DesignTokens.ink)
+                    }
+                    Text("Starting today.")
+                        .font(.system(size: 13))
+                        .foregroundColor(DesignTokens.muted)
+                }
+                Button(editing == nil ? "Add to my wird" : "Save") { save() }
+                    .buttonStyle(PrimaryButtonStyle(enabled: valid))
+                    .disabled(!valid)
+                if let editing {
+                    if appState.state.wird.count > 1 {
+                        HStack(spacing: 10) {
+                            Button("Read earlier") { appState.moveWird(id: editing.id, by: -1) }
+                                .buttonStyle(SoftButtonStyle(height: 48))
+                            Button("Read later") { appState.moveWird(id: editing.id, by: 1) }
+                                .buttonStyle(SoftButtonStyle(height: 48))
+                        }
+                    }
+                    Button {
+                        appState.removeWird(id: editing.id)
+                        dismiss()
+                    } label: {
+                        Text("Remove from my wird")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(DesignTokens.danger)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var upsell: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            PlusBadge()
+            Text("Read more with Tilawa Plus")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(DesignTokens.ink)
+            Text("Your first wird is free. Plus lets you add as many as you like, like Al-Mulk every night or Ya-Sin every two days, each on its own days.")
+                .font(.system(size: 15))
+                .foregroundColor(DesignTokens.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Reading itself is always free.")
+                .font(.system(size: 15))
+                .foregroundColor(DesignTokens.muted)
+            Button("Coming soon") {}
+                .buttonStyle(PrimaryButtonStyle(enabled: false))
+                .disabled(true)
+                .padding(.top, 4)
+            Button("Not now") { dismiss() }
+                .buttonStyle(TextButtonStyle())
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    // MARK: Pieces
+
+    private func save() {
+        let days = byWeekday ? weekdays : []
+        let every = byWeekday ? 0 : everyDays
+        if let editing {
+            var item = editing
+            item.weekdays = days
+            item.everyDays = every
+            // A new "every N days" rhythm starts today.
+            if every != editing.everyDays { item.startDay = Calendar.current.startOfDay(for: Date()) }
+            appState.updateWird(item)
+        } else {
+            appState.addWird(surahId: surahId, weekdays: days, everyDays: every)
+        }
+        dismiss()
+    }
+
+    private func back(_ title: String, action: @escaping () -> Void) -> some View {
+        HStack(spacing: 12) {
+            CircleIconButton(systemName: "chevron.left", accessibilityLabel: "Back", background: DesignTokens.surfaceMuted, action: action)
+            Text(title)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(DesignTokens.ink)
+        }
+        .padding(.bottom, 4)
+    }
+
+    private func stepper(_ icon: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(DesignTokens.accent)
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(DesignTokens.accentTint))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    /// Seven round day toggles, Monday first.
+    private var weekdayPicker: some View {
+        HStack {
+            ForEach(1...7, id: \.self) { day in
+                let on = weekdays.contains(day)
+                let name = WirdItem.dayName(day)
+                Button {
+                    if on { weekdays.remove(day) } else { weekdays.insert(day) }
+                } label: {
+                    Text(String(name.prefix(1)))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(on ? .white : DesignTokens.ink)
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(on ? DesignTokens.accent : DesignTokens.surface))
+                        .overlay(Circle().stroke(on ? DesignTokens.accent : DesignTokens.outline, lineWidth: 1.5))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(name)
+                .accessibilityAddTraits(on ? .isSelected : [])
+                if day < 7 { Spacer(minLength: 0) }
+            }
+        }
     }
 }

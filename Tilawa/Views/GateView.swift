@@ -7,22 +7,27 @@ struct GateView: View {
     @ObservedObject var shield: ShieldService
 
     @State private var done: DoneInfo?
+    /// The wird this pause reads, fixed when it opens (outer nil = not decided yet).
+    @State private var wirdId: Int??
 
     var body: some View {
+        let wird = wirdId ?? appState.resolveGateWird()
         Group {
             if let done {
                 DoneView(info: done, streakDays: appState.state.streakDays, unlockText: unlockText) {
                     shield.showingCompletion = false
                     self.done = nil
                 }
-            } else if appState.state.goal == .review {
+            } else if appState.state.goal == .review && wird == nil {
                 RecallView(appState: appState, onClose: close, onFinish: finish)
             } else {
-                ReadingView(appState: appState, onClose: close, onFinish: finish)
+                // A wird is read, even when the goal is Muraja'ah.
+                ReadingView(appState: appState, wirdId: wird, onClose: close, onFinish: finish)
             }
         }
         .transition(.opacity)
         .animation(.easeInOut(duration: 0.25), value: done != nil)
+        .onAppear { if wirdId == nil { wirdId = .some(appState.resolveGateWird()) } }
     }
 
     private var unlockText: String {
@@ -36,10 +41,12 @@ struct GateView: View {
     }
 
     private func close() {
+        appState.gateWird = .auto
         shield.userRequestedReadingGate = false
     }
 
     private func finish(_ info: DoneInfo) {
+        appState.gateWird = .auto
         shield.showingCompletion = true
         shield.userRequestedReadingGate = false
         shield.completeGateAndScheduleNextLock()
@@ -58,62 +65,114 @@ struct DoneInfo: Equatable {
     var cardRef: String
 }
 
-// MARK: - Reading (Get familiar / Read with meaning)
+// MARK: - Reading (Get familiar / Read with meaning / a wird)
 
+/// A reading pause, one page at a time. After the first page, "Keep reading" turns to the next one
+/// (the rest of a wird, the next wird due today, then the main surah), and every page read counts.
 struct ReadingView: View {
     @ObservedObject var appState: AppStateStore
+    let wirdId: Int?
     let onClose: () -> Void
     let onFinish: (DoneInfo) -> Void
 
-    @State private var verses: [Verse] = []
+    @State private var page: ReadingSegment?
+    /// Pages already counted in this pause, and surahs finished along the way.
+    @State private var read: [ReadingSegment] = []
+    @State private var finished: [String] = []
+    @State private var next: ReadingSegment?
     @State private var duration: Int = 18
     @State private var elapsed: Int = 0
     @State private var timer: Timer?
     @State private var showingTextSettings = false
 
-    private let quran = QuranService.shared
-    private var surah: Surah? { quran.surah(id: appState.state.selectedSurahId) }
+    private var verses: [Verse] { page?.verses ?? [] }
+    private var surah: Surah? { page?.surah }
     private var isReady: Bool { elapsed >= duration }
+    private var sessionCount: Int { read.reduce(0) { $0 + $1.verses.count } }
 
     var body: some View {
         VStack(spacing: 0) {
             GateHeader(title: "Surah \(surah?.name ?? "")", onClose: onClose) { textMenu }
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    if appState.state.readIn == .english, verses.contains(where: { $0.translation == nil }) {
-                        Text("English meaning isn’t available for this surah yet.")
-                            .font(DesignTokens.caption)
-                            .foregroundColor(DesignTokens.muted)
-                            .multilineTextAlignment(.center)
-                            .padding(.bottom, 16)
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        Color.clear.frame(height: 0).id("top")
+                        if page?.wirdId != nil && verses.first?.id == 1 {
+                            Text("TODAY’S WIRD")
+                                .font(.system(size: 11, weight: .semibold))
+                                .tracking(1.5)
+                                .foregroundColor(DesignTokens.muted)
+                                .padding(.bottom, 16)
+                        }
+                        if appState.state.readIn == .english, verses.contains(where: { $0.translation == nil }) {
+                            Text("English meaning isn’t available for this surah yet.")
+                                .font(DesignTokens.caption)
+                                .foregroundColor(DesignTokens.muted)
+                                .multilineTextAlignment(.center)
+                                .padding(.bottom, 16)
+                        }
+                        ForEach(Array(verses.enumerated()), id: \.element.id) { index, verse in
+                            if index > 0 { VerseDivider() }
+                            verseBlock(verse)
+                        }
                     }
-                    ForEach(Array(verses.enumerated()), id: \.element.id) { index, verse in
-                        if index > 0 { VerseDivider() }
-                        verseBlock(verse)
-                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 28)
+                    .padding(.top, 16)
+                    .padding(.bottom, 24)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 28)
-                .padding(.top, 16)
-                .padding(.bottom, 24)
+                .onChange(of: page?.key) { _ in proxy.scrollTo("top", anchor: .top) }
             }
 
-            GateBottomBar(label: "Reading moment", detail: isReady ? rangeText : "\(rangeText) · \(timeLeft)") {
+            GateBottomBar(label: barLabel, detail: isReady ? rangeText : "\(rangeText) · \(timeLeft)") {
                 ThinProgress(value: duration > 0 ? Double(elapsed) / Double(duration) : 1)
-                if isReady {
-                    Button("Done reading", action: finish)
-                        .buttonStyle(PrimaryButtonStyle())
-                } else {
-                    WaitLabel(text: "Reading…")
-                        .accessibilityLabel("Keep reading. \(duration - elapsed) seconds left")
-                }
+                bottomButtons
             }
         }
         .background(DesignTokens.paper.ignoresSafeArea())
         .overlay(alignment: .topTrailing) { ZStack(alignment: .topTrailing) { textSettingsOverlay } }
-        .onAppear(perform: start)
+        .onAppear {
+            if page == nil { show(appState.firstSegment(wirdId: wirdId)) }
+        }
+        .onChange(of: isReady) { ready in
+            if ready, let page { next = appState.nextSegment(after: page) }
+        }
         .onDisappear { timer?.invalidate(); timer = nil }
+    }
+
+    private var barLabel: String {
+        if sessionCount > 0 { return sessionCount == 1 ? "1 verse read" : "\(sessionCount) verses read" }
+        return page?.wirdId != nil ? "Today’s wird" : "Reading moment"
+    }
+
+    @ViewBuilder
+    private var bottomButtons: some View {
+        if isReady, let next, let surah, let page {
+            HStack(spacing: 10) {
+                Button(next.surah.id != surah.id ? "Next: \(next.surah.name)" : "Keep reading") {
+                    recordCurrent()
+                    show(appState.nextSegment(after: page))
+                }
+                .buttonStyle(SoftButtonStyle())
+                Button("Done") { recordCurrent(); end() }
+                    .buttonStyle(PrimaryButtonStyle())
+            }
+        } else if isReady {
+            Button(read.isEmpty ? "Done reading" : "Done") { recordCurrent(); end() }
+                .buttonStyle(PrimaryButtonStyle())
+        } else if !read.isEmpty {
+            // Mid-page after reading more: stop here, counting only the pages finished.
+            HStack(spacing: 10) {
+                WaitLabel(text: "Reading…")
+                    .accessibilityLabel("Keep reading. \(duration - elapsed) seconds left")
+                Button("Stop here", action: end)
+                    .buttonStyle(SoftButtonStyle())
+            }
+        } else {
+            WaitLabel(text: "Reading…")
+                .accessibilityLabel("Keep reading. \(duration - elapsed) seconds left")
+        }
     }
 
     private var textMenu: some View {
@@ -193,18 +252,20 @@ struct ReadingView: View {
         return String(format: "%d:%02d", s / 60, s % 60)
     }
 
-    private func start() {
-        guard let surah,
-              let chunk = quran.currentChunk(surahId: surah.id, chunkIndex: appState.state.currentChunkIndex) else {
-            verses = []
+    /// Shows `segment` and starts its reading timer.
+    private func show(_ segment: ReadingSegment?) {
+        page = segment
+        next = nil
+        guard let segment else {
             duration = 0
+            elapsed = 0
             return
         }
-        verses = chunk.verses
+        let base = segment.verses.reduce(0) { $0 + $1.durationSeconds }
         let scale = appState.state.readingSpeed.secondsPerWordMultiplier / ReadingSpeed.normal.secondsPerWordMultiplier
         // Reading the meaning as well takes longer.
         let meaningExtra = appState.state.goal == .meaning ? 1.6 : 1.0
-        duration = max(5, Int((Double(chunk.duration) * scale * meaningExtra).rounded()))
+        duration = max(5, Int((Double(base) * scale * meaningExtra).rounded()))
         elapsed = 0
         timer?.invalidate()
         let t = Timer(timeInterval: 1, repeats: true) { _ in
@@ -216,32 +277,19 @@ struct ReadingView: View {
         timer = t
     }
 
-    private func finish() {
+    private func recordCurrent() {
+        guard let page else { return }
+        if let name = appState.recordSegment(page) { finished.append(name) }
+        read.append(page)
+    }
+
+    private func end() {
         timer?.invalidate()
-        guard let surah else { return }
-        let count = verses.count
-        let pass = appState.state.timesThroughSurah + 1
-        let finishedPass = appState.recordRead(ayahCount: count, surah: surah)
-        let readUpTo = verses.last?.id ?? 0
-
-        let chip: String
-        if finishedPass {
-            chip = "Finished \(surah.name) · \(pass)×"
-        } else if appState.state.goal == .familiar {
-            chip = "\(surah.name) · \(Ordinal.string(pass)) time through"
+        if let info = appState.doneInfo(read: read, finished: finished) {
+            onFinish(info)
         } else {
-            chip = "\(surah.name) \(readUpTo)/\(surah.totalVerses)"
+            onClose()
         }
-
-        let keep = verses.last(where: { $0.translation != nil }) ?? verses.last
-        onFinish(DoneInfo(
-            headline: count == 1 ? "1 verse read" : "\(count) verses read",
-            chip: chip,
-            cardLabel: "Take with you",
-            cardText: keep?.translation.map { "“\($0)”" } ?? keep?.text ?? "",
-            cardTextIsArabic: keep?.translation == nil,
-            cardRef: keep.map { "\(surah.name) \(surah.id):\($0.id)" } ?? ""
-        ))
     }
 }
 
