@@ -1,5 +1,6 @@
 import FamilyControls
 import SwiftUI
+import UserNotifications
 
 /// "Today": the current surah and goal, this week's rhythm, and the paused apps.
 struct HomeView: View {
@@ -18,14 +19,15 @@ struct HomeView: View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
                 header
-                if remainingSeconds > 0 { unlockBanner }
+                if Features.appPausing && remainingSeconds > 0 { unlockBanner }
                 // A wird due today comes first: it's what pauses read today.
                 let wirdDue = !Wird.dueToday(appState.state).isEmpty
                 if wirdDue { WirdCard(appState: appState, shield: shield) { showingWirdSheet = true } }
                 if let surah { nowCard(surah) }
                 if !wirdDue { WirdCard(appState: appState, shield: shield) { showingWirdSheet = true } }
+                ReminderCard(appState: appState)
                 weekCard
-                appsCard
+                if Features.appPausing { appsCard }
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -111,8 +113,8 @@ struct HomeView: View {
                 shield.userRequestedReadingGate = true
                 shield.skipGateAfterAddingApps = false
             }
-            .buttonStyle(PrimaryButtonStyle(enabled: shield.canStartNewGate || !shield.hasAppsToShield))
-            .disabled(shield.hasAppsToShield && !shield.canStartNewGate)
+            .buttonStyle(PrimaryButtonStyle(enabled: !Features.appPausing || shield.canStartNewGate || !shield.hasAppsToShield))
+            .disabled(Features.appPausing && shield.hasAppsToShield && !shield.canStartNewGate)
         }
         .card()
     }
@@ -336,7 +338,7 @@ struct WirdCard: View {
                 Text("Read Al-Kahf every Friday")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(DesignTokens.ink)
-                Text("Add the surahs you read regularly. On their day, your pauses go through them, a few verses at a time.")
+                Text("Add the surahs you read regularly. On their day, your reminders go through them, a few verses at a time.")
                     .font(.system(size: 14))
                     .foregroundColor(DesignTokens.muted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -363,7 +365,7 @@ struct WirdCard: View {
                         if index > 0 { Rectangle().fill(DesignTokens.hairline).frame(height: 1) }
                         row(item)
                     }
-                    Text("Your pauses today go through this first. Tap Keep reading to finish it in one sitting.")
+                    Text("Reminders today go through this first. Tap Keep reading to finish it in one sitting.")
                         .font(.system(size: 12))
                         .foregroundColor(DesignTokens.muted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -416,7 +418,7 @@ struct WirdCard: View {
                         .background(Circle().fill(DesignTokens.accent))
                         .accessibilityLabel("Done")
                 } else {
-                    let canOpen = shield.canStartNewGate || !shield.hasAppsToShield
+                    let canOpen = !Features.appPausing || shield.canStartNewGate || !shield.hasAppsToShield
                     Button(upTo == 0 ? "Read" : "Continue") {
                         appState.gateWird = .item(item.id)
                         shield.userRequestedReadingGate = true
@@ -589,7 +591,7 @@ struct WirdEditorSheet: View {
             Text("Add to my wird")
                 .font(.system(size: 22, weight: .bold))
                 .foregroundColor(DesignTokens.ink)
-            Text("Your pauses go through it on its days.")
+            Text("Reminders go through it on its days.")
                 .font(.system(size: 14))
                 .foregroundColor(DesignTokens.muted)
                 .padding(.bottom, 4)
@@ -824,6 +826,211 @@ struct WirdEditorSheet: View {
                 .accessibilityAddTraits(on ? .isSelected : [])
                 if day < 7 { Spacer(minLength: 0) }
             }
+        }
+    }
+}
+
+// MARK: - Reading reminders
+
+/// "8 AM", "Noon", "Midnight".
+func hourLabel(_ hour: Int) -> String {
+    switch hour {
+    case 0, 24: return "Midnight"
+    case 12: return "Noon"
+    default: return "\(hour % 12 == 0 ? 12 : hour % 12) \(hour < 12 ? "AM" : "PM")"
+    }
+}
+
+/// "Every 2 hours · 8 AM – 10 PM".
+func reminderSummary(_ state: AppState) -> String {
+    let every = state.remindEveryHours == 1 ? "Every hour" : "Every \(state.remindEveryHours) hours"
+    return "\(every) · \(hourLabel(state.remindFrom)) – \(hourLabel(state.remindUntil))"
+}
+
+/// Today: when the next reminder comes, or a way to turn them on.
+struct ReminderCard: View {
+    @ObservedObject var appState: AppStateStore
+    @State private var notificationsAllowed = true
+
+    var body: some View {
+        let state = appState.state
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(get: { appState.state.remindersOn }, set: { appState.state.remindersOn = $0 })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Reminders")
+                        .font(DesignTokens.headline)
+                        .foregroundColor(DesignTokens.ink)
+                    Text(state.remindersOn ? reminderSummary(state) : "Off · a few verses every few hours")
+                        .font(DesignTokens.caption)
+                        .foregroundColor(DesignTokens.muted)
+                }
+            }
+            .tint(DesignTokens.accent)
+            if state.remindersOn {
+                if !notificationsAllowed {
+                    NotificationsBlocked()
+                } else if let next = appState.nextReminderAt {
+                    Text(nextLabel(next))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(DesignTokens.accent)
+                }
+            }
+        }
+        .card()
+        .onAppear(perform: checkAllowed)
+        .onChange(of: state.remindersOn) { _ in checkAllowed() }
+    }
+
+    private func checkAllowed() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async { notificationsAllowed = settings.authorizationStatus != .denied }
+        }
+    }
+
+    private func nextLabel(_ date: Date) -> String {
+        let clock = date.formatted(date: .omitted, time: .shortened)
+        let cal = Calendar.current
+        if cal.isDateInToday(date) { return "Next at \(clock)" }
+        if cal.isDateInTomorrow(date) { return "Next tomorrow at \(clock)" }
+        return "Next \(date.formatted(.dateTime.weekday(.wide))) at \(clock)"
+    }
+}
+
+/// Notifications are switched off for Tilawa in Settings: only the person can turn them back on.
+struct NotificationsBlocked: View {
+    var body: some View {
+        Button {
+            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "bell.slash")
+                    .foregroundColor(DesignTokens.streak)
+                Text("Notifications are off for Tilawa, so reminders can’t reach you. Tap to allow them in Settings.")
+                    .font(.system(size: 13))
+                    .foregroundColor(DesignTokens.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+            }
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DesignTokens.streakTint))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// How often, and between which hours. Used in onboarding and Settings.
+struct ReminderOptions: View {
+    @ObservedObject var appState: AppStateStore
+
+    var body: some View {
+        let state = appState.state
+        VStack(alignment: .leading, spacing: 12) {
+            Text("How often")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(DesignTokens.ink)
+            TilawaSegmented(
+                options: [(1, "1 hour"), (2, "2 hours"), (3, "3 hours"), (4, "4 hours")],
+                selection: Binding(get: { appState.state.remindEveryHours }, set: { appState.state.remindEveryHours = $0 })
+            )
+            Text("Between")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(DesignTokens.ink)
+                .padding(.top, 4)
+            hourStepper("From", state.remindFrom,
+                        down: { appState.state.remindFrom = max(0, state.remindFrom - 1) },
+                        up: { appState.state.remindFrom = min(state.remindUntil - 1, state.remindFrom + 1) })
+            hourStepper("Until", state.remindUntil,
+                        down: { appState.state.remindUntil = max(state.remindFrom + 1, state.remindUntil - 1) },
+                        up: { appState.state.remindUntil = min(24, state.remindUntil + 1) })
+            Text("Quiet the rest of the time. Reading in the app moves the next reminder later.")
+                .font(.system(size: 13))
+                .foregroundColor(DesignTokens.muted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func hourStepper(_ label: String, _ hour: Int, down: @escaping () -> Void, up: @escaping () -> Void) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 15))
+                .foregroundColor(DesignTokens.muted)
+            Spacer()
+            roundStep("minus", "Earlier", down)
+            Text(hourLabel(hour))
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(DesignTokens.ink)
+                .frame(width: 92)
+            roundStep("plus", "Later", up)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DesignTokens.surfaceMuted))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(label) \(hourLabel(hour))")
+    }
+
+    private func roundStep(_ icon: String, _ label: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(DesignTokens.accent)
+                .frame(width: 36, height: 36)
+                .background(Circle().fill(DesignTokens.surface))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+/// What a reminder looks like, with the person's own next verse.
+struct ReminderPreview: View {
+    @ObservedObject var appState: AppStateStore
+    private let quran = QuranService.shared
+
+    var body: some View {
+        let state = appState.state
+        if let surah = quran.surah(id: state.selectedSurahId), !surah.chunks.isEmpty,
+           let first = surah.chunks[min(state.currentChunkIndex, surah.chunks.count - 1)].ayahIds.first,
+           let verse = surah.verses.first(where: { $0.id == first }) {
+            let review = state.goal == .review
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(DesignTokens.accent)
+                        .frame(width: 20, height: 20)
+                        .overlay(Text("ا").font(DesignTokens.arabic(12)).foregroundColor(.white))
+                    Text("TILAWA · now")
+                        .font(.system(size: 12))
+                        .foregroundColor(DesignTokens.muted)
+                }
+                Text(review ? "Quick muraja’ah · \(surah.name)" : "A few verses of \(surah.name)")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(DesignTokens.ink)
+                Group {
+                    if review {
+                        Text("Can you recall the next ayah? About 15 seconds.")
+                    } else {
+                        switch state.readIn {
+                        case .arabic:
+                            Text(verse.text)
+                                .font(DesignTokens.arabic(18))
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .environment(\.layoutDirection, .rightToLeft)
+                        case .transliteration: Text(verse.transliteration)
+                        case .english: Text(verse.translation ?? verse.transliteration)
+                        }
+                    }
+                }
+                .font(.system(size: 14))
+                .foregroundColor(DesignTokens.inkSoft)
+                .lineLimit(2)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(DesignTokens.surface))
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Example reminder")
         }
     }
 }

@@ -3,7 +3,7 @@ import UIKit
 import UserNotifications
 
 /// Handles shield “open Tilawa to read” notification: show gate when user taps the banner.
-private enum TilawaNotificationGate {
+enum TilawaNotificationGate {
     static let requestId = "tilawa.open_ayah_reader"
     static let pendingFromNotificationKey = "tilawa.pendingReadingGateFromNotification"
 }
@@ -24,6 +24,14 @@ final class TilawaNotificationCenterDelegate: NSObject, UNUserNotificationCenter
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         defer { completionHandler() }
+        // A reading reminder: open the reading (today's wird first, then the main surah).
+        if response.notification.request.identifier.hasPrefix(Reminders.idPrefix) {
+            Task { @MainActor in
+                UserDefaults.standard.set(true, forKey: TilawaNotificationGate.pendingFromNotificationKey)
+                ShieldService.shared.userRequestedReadingGate = true
+            }
+            return
+        }
         guard response.notification.request.identifier == TilawaNotificationGate.requestId else { return }
         Task { @MainActor in
             let shield = ShieldService.shared
@@ -105,10 +113,14 @@ struct TilawaApp: App {
                 if appState.state.hasCompletedOnboarding && !hasRequestedAuth {
                     hasRequestedAuth = true
                     Task {
-                        await shield.requestAuthorization()
-                        _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+                        if Features.appPausing { await shield.requestAuthorization() }
+                        // New people are asked in onboarding; this covers people who set up before reminders.
+                        if appState.state.remindersOn {
+                            _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+                        }
                     }
                 }
+                appState.rescheduleReminders()
                 shield.skipGateAfterAddingApps = false
                 if UserDefaults.standard.bool(forKey: TilawaNotificationGate.pendingFromNotificationKey) {
                     UserDefaults.standard.set(false, forKey: TilawaNotificationGate.pendingFromNotificationKey)
@@ -117,12 +129,18 @@ struct TilawaApp: App {
                 let hasApps = shield.hasAppsToShield
                 let inUnlockWindow = shield.isUnlockWindowActive
                 print("[Tilawa] onAppear: tabs=\(showMainTabs) hasApps=\(hasApps) unlockWindow=\(inUnlockWindow) requestedGate=\(shield.userRequestedReadingGate)")
-                if !inUnlockWindow {
+                if Features.appPausing && !inUnlockWindow {
                     shield.startFullDayMonitoring()
                 }
             }
             .onChange(of: scenePhase) { newValue in
                 if newValue == .active {
+                    // Keeps a few days of reminders queued, with today's verses.
+                    appState.rescheduleReminders()
+                    if UserDefaults.standard.bool(forKey: TilawaNotificationGate.pendingFromNotificationKey) {
+                        UserDefaults.standard.set(false, forKey: TilawaNotificationGate.pendingFromNotificationKey)
+                        shield.userRequestedReadingGate = true
+                    }
                     shield.skipGateAfterAddingApps = false
                 }
             }

@@ -31,6 +31,7 @@ struct GateView: View {
     }
 
     private var unlockText: String {
+        guard Features.appPausing else { return "Well done. Your next reminder picks up from here." }
         switch shield.nextSessionDelay {
         case .m15: return "Your apps are open for the next 15 minutes."
         case .m30: return "Your apps are open for the next 30 minutes."
@@ -49,7 +50,10 @@ struct GateView: View {
         appState.gateWird = .auto
         shield.showingCompletion = true
         shield.userRequestedReadingGate = false
-        shield.completeGateAndScheduleNextLock()
+        if Features.appPausing { shield.completeGateAndScheduleNextLock() }
+        // Just read: the next reminder comes a full interval from now, and the one showing is cleared.
+        Reminders.clearDelivered()
+        appState.rescheduleReminders()
         done = info
     }
 }
@@ -891,11 +895,15 @@ struct DoneView: View {
             Button("Done", action: onDone)
                 .buttonStyle(PrimaryButtonStyle())
                 .padding(.horizontal, 24)
-            Text("Swipe back to your app whenever you’re ready")
-                .font(DesignTokens.caption)
-                .foregroundColor(DesignTokens.muted)
-                .padding(.top, 14)
-                .padding(.bottom, 12)
+            if Features.appPausing {
+                Text("Swipe back to your app whenever you’re ready")
+                    .font(DesignTokens.caption)
+                    .foregroundColor(DesignTokens.muted)
+                    .padding(.top, 14)
+                    .padding(.bottom, 12)
+            } else {
+                Spacer().frame(height: 16)
+            }
         }
         .background(DesignTokens.mist.ignoresSafeArea())
     }

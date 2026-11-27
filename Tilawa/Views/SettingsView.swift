@@ -29,8 +29,11 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: DesignTokens.spacing3xl) {
                     wirdSection
                     readingSection
-                    guardedAppsSection
-                    lockScheduleSection
+                    remindersSection
+                    if Features.appPausing {
+                        guardedAppsSection
+                        lockScheduleSection
+                    }
                     languageSection
                     dataSection
                     aboutCard
@@ -164,6 +167,29 @@ struct SettingsView: View {
             .padding(DesignTokens.spacingL)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Reminders
+
+    private var remindersSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
+            Text("Reminders")
+                .font(sectionLabelFont)
+                .tracking(0.22)
+                .textCase(.uppercase)
+                .foregroundColor(DesignTokens.sectionLabel)
+            VStack(spacing: 0) {
+                settingToggle("Reading reminders", "A few verses every few hours.",
+                              Binding(get: { appState.state.remindersOn }, set: { appState.state.remindersOn = $0 }))
+                if appState.state.remindersOn {
+                    Rectangle().fill(DesignTokens.cardBorder).frame(height: 1)
+                    ReminderOptions(appState: appState)
+                        .padding(DesignTokens.spacingL)
+                }
+            }
+            .background(DesignTokens.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusLg))
+        }
     }
 
     // MARK: - My wird

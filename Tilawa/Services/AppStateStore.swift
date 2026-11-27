@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class AppStateStore: ObservableObject {
@@ -7,7 +8,16 @@ final class AppStateStore: ObservableObject {
         didSet {
             StatsService.shared.saveState(state)
             ShieldContext.write(from: state)
+            if oldValue.reminderKey != state.reminderKey { rescheduleReminders() }
         }
+    }
+
+    /// When the next reading reminder comes, or nil when they're off.
+    @Published private(set) var nextReminderAt: Date?
+
+    /// Rebuilds the queue of upcoming reminders (on launch, after reading, when settings change).
+    func rescheduleReminders() {
+        nextReminderAt = Reminders.reschedule(state: state)
     }
 
     init() {
@@ -184,6 +194,118 @@ final class AppStateStore: ObservableObject {
         var list = state.wird
         list.insert(list.remove(at: i), at: j)
         state.wird = list
+    }
+}
+
+// MARK: - Reading reminders
+
+/// Gentle reading reminders: every few hours inside the person's waking window, a notification with the next
+/// few verses. iOS can't repeat "every 2 hours between 8 and 10", so the next few days are queued ahead and
+/// rebuilt whenever the app opens or the person reads. If they stop opening the app, reminders end with the queue.
+enum Reminders {
+    static let idPrefix = "tilawa.reminder."
+    /// How far ahead reminders are queued (iOS keeps at most 64 pending notifications per app).
+    static let daysAhead = 3
+    static let maxQueued = 48
+
+    /// The next reminder after `from`, inside the window.
+    static func nextAt(_ state: AppState, from: Date) -> Date {
+        let cal = Calendar.current
+        let candidate = from.addingTimeInterval(TimeInterval(state.remindEveryHours) * 3600)
+        let day = cal.startOfDay(for: candidate)
+        let start = cal.date(byAdding: .hour, value: min(max(state.remindFrom, 0), 23), to: day) ?? candidate
+        let end = cal.date(byAdding: .hour, value: min(max(state.remindUntil, 1), 24), to: day) ?? candidate
+        if candidate < start { return start }                                         // night: first thing in the morning
+        if candidate >= end { return cal.date(byAdding: .day, value: 1, to: start) ?? start } // past the window: tomorrow
+        return candidate
+    }
+
+    /// Replaces the queued reminders. Returns when the first one comes.
+    @MainActor
+    @discardableResult
+    static func reschedule(state: AppState, now: Date = Date()) -> Date? {
+        let center = UNUserNotificationCenter.current()
+        // Fixed ids, removed in the same order as the adds below (a lookup first would race with them).
+        center.removePendingNotificationRequests(withIdentifiers: (0..<64).map { "\(idPrefix)\($0)" })
+        guard state.remindersOn, state.hasCompletedOnboarding else { return nil }
+
+        let quran = QuranService.shared
+        if quran.surahs.isEmpty { quran.load() }
+        let horizon = now.addingTimeInterval(TimeInterval(daysAhead) * 24 * 3600)
+        var times: [Date] = []
+        var t = nextAt(state, from: now)
+        while t < horizon && times.count < maxQueued {
+            times.append(t)
+            t = nextAt(state, from: t)
+        }
+        for (index, time) in times.enumerated() {
+            guard let content = content(state: state, at: time, now: now, quran: quran) else { continue }
+            let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: time)
+            let request = UNNotificationRequest(
+                identifier: "\(idPrefix)\(index)",
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+            )
+            center.add(request)
+        }
+        return times.first
+    }
+
+    /// Clears reminders already showing (after the person reads).
+    static func clearDelivered() {
+        let center = UNUserNotificationCenter.current()
+        center.getDeliveredNotifications { delivered in
+            center.removeDeliveredNotifications(withIdentifiers: delivered.map(\.request.identifier).filter { $0.hasPrefix(idPrefix) })
+        }
+    }
+
+    /// The verses a reminder offers: that day's wird first, else the main surah (a recall in muraja'ah).
+    /// Queued ahead, so today's wird starts from today's progress and later days from the beginning.
+    static func content(state: AppState, at time: Date, now: Date, quran: QuranService) -> UNMutableNotificationContent? {
+        let sameDay = Calendar.current.isDate(time, inSameDayAs: now)
+        for item in Wird.activeItems(state) where item.isDue(on: time) {
+            guard let surah = quran.surah(id: item.surahId) else { continue }
+            let upTo = sameDay ? Wird.upTo(state, item, now: now) : 0
+            let verses = Wird.nextVerses(surah, after: upTo)
+            if !verses.isEmpty {
+                return reading(title: "Today’s wird · \(surah.name)", surah: surah, verses: verses, state: state)
+            }
+        }
+        guard let surah = quran.surah(id: state.selectedSurahId), !surah.chunks.isEmpty else { return nil }
+        if state.goal == .review {
+            let content = UNMutableNotificationContent()
+            content.title = "Quick muraja’ah · \(surah.name)"
+            if let verse = StatsService.shared.nextReviewVerse(in: surah, state: state, now: time) {
+                content.body = "Can you recall ayah \(verse.id)? About 15 seconds."
+            } else {
+                content.body = "Can you recall the next ayah? About 15 seconds."
+            }
+            content.sound = .default
+            return content
+        }
+        let chunk = surah.chunks[min(state.currentChunkIndex, surah.chunks.count - 1)]
+        let verses = chunk.ayahIds.compactMap { id in surah.verses.first { $0.id == id } }
+        guard !verses.isEmpty else { return nil }
+        return reading(title: "A few verses of \(surah.name)", surah: surah, verses: verses, state: state)
+    }
+
+    private static func reading(title: String, surah: Surah, verses: [Verse], state: AppState) -> UNMutableNotificationContent {
+        let first = verses[0]
+        // The verse as the person reads it. The translation is shown as it is (QuranEnc asks it isn't changed).
+        let line: String
+        switch state.readIn {
+        case .arabic: line = first.text
+        case .transliteration: line = first.transliteration
+        case .english: line = first.translation ?? first.transliteration
+        }
+        let range = verses.count == 1 ? "\(surah.id):\(first.id)" : "\(surah.id):\(first.id)–\(verses.last!.id)"
+        let count = verses.count == 1 ? "1 verse" : "\(verses.count) verses"
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = "\(line)\n\(surah.name) \(range) · \(count)"
+        content.sound = .default
+        content.threadIdentifier = "tilawa.reminders"
+        return content
     }
 }
 

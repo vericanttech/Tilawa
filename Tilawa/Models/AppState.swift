@@ -203,6 +203,11 @@ struct AppState: Codable {
     var wirdsCompleted: Int = 0
     /// Tilawa Plus. Until purchases are built, only switchable in debug builds.
     var isPro: Bool = false
+    /// Reading reminders: every `remindEveryHours` hours between `remindFrom` and `remindUntil` (hours; 24 = midnight).
+    var remindersOn: Bool = true
+    var remindEveryHours: Int = 2
+    var remindFrom: Int = 8
+    var remindUntil: Int = 22
 
     init() {}
 
@@ -213,7 +218,8 @@ struct AppState: Codable {
              hasCompletedOnboarding, goal, readIn, showArabic, showMeaning,
              timesThroughSurah, surahsCompleted,
              reviewItems, totalReviews, dailyAyahs,
-             wird, wirdProgress, wirdsCompleted, isPro
+             wird, wirdProgress, wirdsCompleted, isPro,
+             remindersOn, remindEveryHours, remindFrom, remindUntil
     }
 
     /// Keys only read from older saved state.
@@ -251,5 +257,21 @@ struct AppState: Codable {
         wirdProgress = try c.decodeIfPresent([Int: WirdProgress].self, forKey: .wirdProgress) ?? [:]
         wirdsCompleted = try c.decodeIfPresent(Int.self, forKey: .wirdsCompleted) ?? 0
         isPro = try c.decodeIfPresent(Bool.self, forKey: .isPro) ?? false
+        remindersOn = try c.decodeIfPresent(Bool.self, forKey: .remindersOn) ?? true
+        remindEveryHours = try c.decodeIfPresent(Int.self, forKey: .remindEveryHours) ?? 2
+        remindFrom = try c.decodeIfPresent(Int.self, forKey: .remindFrom) ?? 8
+        remindUntil = try c.decodeIfPresent(Int.self, forKey: .remindUntil) ?? 22
     }
+
+    /// The reminder settings, compared to know when to reschedule.
+    var reminderKey: [Int] {
+        [remindersOn ? 1 : 0, remindEveryHours, remindFrom, remindUntil, hasCompletedOnboarding ? 1 : 0]
+    }
+}
+
+/// Switches for parts of the app that are built but not offered right now.
+enum Features {
+    /// Pausing other apps until you read (Screen Time / Family Controls). Off for now: reminders come first,
+    /// and pausing returns later as an option.
+    static let appPausing = false
 }

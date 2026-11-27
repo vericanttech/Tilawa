@@ -1,6 +1,7 @@
 import FamilyControls
 import ManagedSettings
 import SwiftUI
+import UserNotifications
 
 /// First launch: Welcome → What brings you here → How you read → Choose apps → Choose a surah.
 struct OnboardingView: View {
@@ -21,7 +22,7 @@ struct OnboardingView: View {
             case 0: welcome
             case 1: goalStep
             case 2: readInStep
-            case 3: appsStep
+            case 3: if Features.appPausing { appsStep } else { remindersStep }
             default: surahStep
             }
         }
@@ -77,7 +78,7 @@ struct OnboardingView: View {
                     .font(.system(size: 30, weight: .bold))
                     .foregroundColor(DesignTokens.ink)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("Each time you reach for a distracting app, Tilawa gives you a few verses first.")
+                Text("A gentle reminder every few hours: two or three verses, read in under a minute.")
                     .font(DesignTokens.body)
                     .foregroundColor(DesignTokens.muted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -124,7 +125,7 @@ struct OnboardingView: View {
             current: 1,
             back: { step = 0 },
             title: "What brings you to Tilawa?",
-            subtitle: "This shapes what you see at each pause. You can switch anytime.",
+            subtitle: "This shapes what you read at each reminder. You can switch anytime.",
             continueAction: { step = 2 }
         ) {
             VStack(spacing: 12) {
@@ -350,6 +351,36 @@ struct OnboardingView: View {
         }
     }
 
+    // MARK: - 4 · Reminders
+
+    private var remindersStep: some View {
+        stepScaffold(
+            current: 3,
+            back: { step = 2 },
+            title: "When should we remind you?",
+            subtitle: "A gentle notification with your next few verses. Read them right away, or whenever you’re ready.",
+            continueTitle: "Turn on reminders",
+            continueAction: {
+                appState.state.remindersOn = true
+                Task {
+                    _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+                    await MainActor.run { step = 4 }
+                }
+            }
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                ReminderPreview(appState: appState)
+                ReminderOptions(appState: appState)
+                Button("Not now") {
+                    appState.state.remindersOn = false
+                    step = 4
+                }
+                .buttonStyle(TextButtonStyle())
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
     // MARK: - 5 · Choose a surah
 
     private var surahStep: some View {
@@ -378,7 +409,7 @@ struct OnboardingView: View {
 
                 if appState.state.goal != .review {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("How long is each pause?")
+                        Text("How long is each reading?")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(DesignTokens.ink)
                         TilawaSegmented(
@@ -409,8 +440,8 @@ struct OnboardingView: View {
     private var surahSubtitle: String {
         switch appState.state.goal {
         case .familiar: return "You’ll read it in small pieces, over and over, until it feels familiar."
-        case .review: return "Each pause asks you to recall one verse. Verses you know well come back less often."
-        case .meaning: return "Each pause continues where you left off, with the English meaning first."
+        case .review: return "Each time asks you to recall one verse. Verses you know well come back less often."
+        case .meaning: return "Each time continues where you left off, with the English meaning first."
         }
     }
 
