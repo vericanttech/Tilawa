@@ -36,6 +36,10 @@ class StateStore(context: Context) {
             reviewItems = decodeReviews(prefs.getString("reviewItems", null)),
             totalReviews = prefs.getInt("totalReviews", 0),
             dailyAyahs = decodeDays(prefs.getString("dailyAyahs", null)),
+            wird = decodeWird(prefs.getString("wird", null)),
+            wirdProgress = decodeWirdProgress(prefs.getString("wirdProgress", null)),
+            wirdsCompleted = prefs.getInt("wirdsCompleted", 0),
+            isPro = prefs.getBoolean("isPro", false),
         )
     }
 
@@ -63,6 +67,10 @@ class StateStore(context: Context) {
             .putString("reviewItems", encodeReviews(state.reviewItems))
             .putInt("totalReviews", state.totalReviews)
             .putString("dailyAyahs", encodeDays(state.dailyAyahs))
+            .putString("wird", encodeWird(state.wird))
+            .putString("wirdProgress", encodeWirdProgress(state.wirdProgress))
+            .putInt("wirdsCompleted", state.wirdsCompleted)
+            .putBoolean("isPro", state.isPro)
             .apply()
     }
 
@@ -78,6 +86,8 @@ class StateStore(context: Context) {
         reviewItems = emptyMap(),
         totalReviews = 0,
         dailyAyahs = emptyMap(),
+        wirdProgress = emptyMap(),
+        wirdsCompleted = 0,
     ).also(::save)
 
     /** Words the "app is paused" notification uses (read by the accessibility service). */
@@ -96,6 +106,46 @@ class StateStore(context: Context) {
         json.keys().asSequence().associate { key ->
             val o = json.getJSONObject(key)
             key.toInt() to ReviewItem(o.optInt("stage"), o.optLong("dueAt"), o.optInt("times"))
+        }
+    }.getOrDefault(emptyMap())
+
+    private fun encodeWird(items: List<WirdItem>): String = org.json.JSONArray().apply {
+        items.forEach { item ->
+            put(
+                JSONObject()
+                    .put("id", item.id)
+                    .put("surah", item.surahId)
+                    .put("weekdays", org.json.JSONArray(item.weekdays.sorted()))
+                    .put("everyDays", item.everyDays)
+                    .put("startDay", item.startDay),
+            )
+        }
+    }.toString()
+
+    private fun decodeWird(raw: String?): List<WirdItem> = runCatching {
+        val json = org.json.JSONArray(raw ?: return emptyList())
+        (0 until json.length()).map { i ->
+            val o = json.getJSONObject(i)
+            val days = o.optJSONArray("weekdays")
+            WirdItem(
+                id = o.getLong("id"),
+                surahId = o.getInt("surah"),
+                weekdays = (0 until (days?.length() ?: 0)).map { days!!.getInt(it) }.toSet(),
+                everyDays = o.optInt("everyDays"),
+                startDay = o.optLong("startDay"),
+            )
+        }
+    }.getOrDefault(emptyList())
+
+    private fun encodeWirdProgress(progress: Map<Long, WirdProgress>): String = JSONObject().apply {
+        progress.forEach { (id, p) -> put(id.toString(), JSONObject().put("day", p.day).put("upTo", p.upTo)) }
+    }.toString()
+
+    private fun decodeWirdProgress(raw: String?): Map<Long, WirdProgress> = runCatching {
+        val json = JSONObject(raw ?: return emptyMap())
+        json.keys().asSequence().associate { key ->
+            val o = json.getJSONObject(key)
+            key.toLong() to WirdProgress(o.getLong("day"), o.getInt("upTo"))
         }
     }.getOrDefault(emptyMap())
 

@@ -63,6 +63,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tilawa.app.MainViewModel
+import com.tilawa.app.Segment
+import androidx.compose.foundation.ScrollState
+import androidx.compose.runtime.mutableStateListOf
 import com.tilawa.app.data.DoneInfo
 import com.tilawa.app.data.ReadIn
 import com.tilawa.app.data.ReadingGoal
@@ -76,7 +79,8 @@ fun GateScreen(vm: MainViewModel) {
     val done = vm.done
     when {
         done != null -> DoneScreen(vm, done)
-        vm.state.goal == ReadingGoal.REVIEW -> RecallScreen(vm)
+        // A wird is read, even when the goal is Muraja'ah.
+        vm.state.goal == ReadingGoal.REVIEW && vm.gateWirdId == null -> RecallScreen(vm)
         else -> ReadingScreen(vm)
     }
 }
@@ -166,25 +170,42 @@ private fun VerseDivider() {
 
 // MARK: Reading
 
+/**
+ * A reading pause, one page at a time. After the first page, "Keep reading" turns to the next one
+ * (the rest of a wird, the next wird due today, then the main surah), and every page read counts.
+ */
 @Composable
 private fun ReadingScreen(vm: MainViewModel) {
     val state = vm.state
-    val surah = vm.surah ?: return
-    val verses = remember(state.selectedSurahId, state.currentChunkIndex) { vm.currentVerses() }
-    val duration = remember(verses, state.goal, state.readingSpeed) { vm.readingSeconds(verses) }
-    var elapsed by remember(verses) { mutableIntStateOf(0) }
+    var page by remember { mutableStateOf(vm.firstSegment()) }
+    val current = page ?: return
+    // Pages already counted in this pause, and surahs finished along the way.
+    val read = remember { mutableStateListOf<Segment>() }
+    val finished = remember { mutableStateListOf<String>() }
+    val verses = current.verses
+    val surah = current.surah
+    val duration = remember(current, state.readingSpeed) { vm.readingSeconds(verses) }
+    var elapsed by remember(current) { mutableIntStateOf(0) }
     val ready = elapsed >= duration
     val canClose = vm.isManualGate
     var menu by remember { mutableStateOf(false) }
+    val scroll = remember(current) { ScrollState(0) }
+    val next = remember(current, ready) { if (ready) vm.nextSegment(current) else null }
 
     BackHandler { if (canClose) vm.dismissGate() }
-    LaunchedEffect(verses) { while (elapsed < duration) { delay(1_000); elapsed += 1 } }
+    LaunchedEffect(current) { while (elapsed < duration) { delay(1_000); elapsed += 1 } }
+
+    fun recordCurrent() {
+        vm.recordSegment(current)?.let { finished += it }
+        read += current
+    }
 
     val range = when {
         verses.isEmpty() -> ""
         verses.size == 1 -> "Ayah ${verses.first().id} of ${surah.totalVerses}"
         else -> "Ayahs ${verses.first().id}–${verses.last().id} of ${surah.totalVerses}"
     }
+    val sessionCount = read.sumOf { it.verses.size }
 
     Column(Modifier.fillMaxSize().background(T.Paper).statusBarsPadding().navigationBarsPadding()) {
         GateHeader("Surah ${surah.name}", if (canClose) vm::dismissGate else null) {
@@ -208,9 +229,13 @@ private fun ReadingScreen(vm: MainViewModel) {
         }
 
         Column(
-            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 16.dp),
+            Modifier.weight(1f).verticalScroll(scroll).padding(horizontal = 28.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            if (current.wirdId != null && verses.firstOrNull()?.id == 1) {
+                Text("TODAY’S WIRD", color = T.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.5.sp)
+                Spacer(Modifier.height(16.dp))
+            }
             if (state.readIn == ReadIn.ENGLISH && verses.any { it.translation == null }) {
                 Text("English meaning isn’t available for this surah yet.", color = T.Muted, fontSize = 13.sp, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(16.dp))
@@ -226,15 +251,37 @@ private fun ReadingScreen(vm: MainViewModel) {
         }
 
         val left = (duration - elapsed).coerceAtLeast(0)
+        val label = when {
+            sessionCount > 0 -> if (sessionCount == 1) "1 verse read" else "$sessionCount verses read"
+            current.wirdId != null -> "Today’s wird"
+            canClose -> "Reading"
+            else -> "Reading moment"
+        }
         BottomBar(
-            label = if (canClose) "Reading" else "Reading moment",
+            label = label,
             trailingLabel = if (ready) range else "$range · %d:%02d".format(left / 60, left % 60),
         ) {
             ThinProgress(if (duration > 0) elapsed.toFloat() / duration else 1f)
-            if (ready) {
-                PrimaryButton("Done reading") { vm.finishReading(verses) }
-            } else {
-                WaitBar("Reading…", "Keep reading. $left seconds left")
+            when {
+                ready && next != null -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SoftButton(if (next.surah.id != surah.id) "Next: ${next.surah.name}" else "Keep reading", Modifier.weight(1f)) {
+                        recordCurrent()
+                        page = vm.nextSegment(current)
+                    }
+                    Box(Modifier.weight(1f)) {
+                        PrimaryButton("Done") { recordCurrent(); vm.finishSession(read.toList(), finished.toList()) }
+                    }
+                }
+                ready -> PrimaryButton(if (read.isEmpty()) "Done reading" else "Done") {
+                    recordCurrent()
+                    vm.finishSession(read.toList(), finished.toList())
+                }
+                // Mid-page after reading more: stop here, counting only the pages finished.
+                read.isNotEmpty() -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(Modifier.weight(1f)) { WaitBar("Reading…", "Keep reading. $left seconds left") }
+                    SoftButton("Stop here", Modifier.weight(1f)) { vm.finishSession(read.toList(), finished.toList()) }
+                }
+                else -> WaitBar("Reading…", "Keep reading. $left seconds left")
             }
         }
     }

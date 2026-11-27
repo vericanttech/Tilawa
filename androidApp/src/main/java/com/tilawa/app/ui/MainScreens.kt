@@ -104,6 +104,8 @@ fun TodayScreen(vm: MainViewModel) {
         }
     }
     if (showPicker) AppPickerSheet(vm) { showPicker = false }
+    var wirdSheet by remember { mutableStateOf(false) }
+    if (wirdSheet) WirdEditorSheet(vm, editing = null) { wirdSheet = false }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
@@ -128,7 +130,11 @@ fun TodayScreen(vm: MainViewModel) {
             }
         }
 
+        // A wird due today comes first: it's what pauses read today.
+        val wirdDue = com.tilawa.app.data.Wird.dueToday(state).isNotEmpty()
+        if (wirdDue) WirdCard(vm) { wirdSheet = true }
         if (surah != null) NowCard(vm, surah)
+        if (!wirdDue) WirdCard(vm) { wirdSheet = true }
         WeekCard(vm)
 
         Card {
@@ -461,11 +467,14 @@ fun SettingsScreen(vm: MainViewModel) {
     val state = vm.state
     var showApps by remember { mutableStateOf(false) }
     var showReset by remember { mutableStateOf(false) }
+    // null = closed; Pair(null) = adding; Pair(item) = editing that item.
+    var wirdEditor by remember { mutableStateOf<Pair<com.tilawa.app.data.WirdItem?, Unit>?>(null) }
     var serviceOn by remember { mutableStateOf(vm.accessibilityEnabled()) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { serviceOn = vm.accessibilityEnabled() } }
 
     if (showApps) AppPickerSheet(vm) { showApps = false }
+    wirdEditor?.let { (item, _) -> WirdEditorSheet(vm, editing = item) { wirdEditor = null } }
     if (showReset) AlertDialog(
         onDismissRequest = { showReset = false },
         containerColor = T.Surface,
@@ -482,6 +491,9 @@ fun SettingsScreen(vm: MainViewModel) {
         ScreenTitle("Settings")
         SectionLabel("My goal")
         ReadingGoal.entries.forEach { GoalCard(it, state.goal == it) { vm.setGoal(it) } }
+
+        SectionLabel("My wird")
+        WirdSettings(vm) { wirdEditor = it to Unit }
 
         SectionLabel("Reading")
         Card(padding = 0.dp, radius = 20.dp) {

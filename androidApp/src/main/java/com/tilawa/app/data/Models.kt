@@ -89,6 +89,39 @@ data class ReviewItem(
     val isStrong: Boolean get() = stage >= 3 && timesReviewed >= 4
 }
 
+/**
+ * One surah in the person's wird (الورد), with the days it's read on.
+ * Either [weekdays] (1 = Monday … 7 = Sunday; all seven = every day) or every [everyDays] days from [startDay].
+ */
+data class WirdItem(
+    val id: Long,
+    val surahId: Int,
+    val weekdays: Set<Int> = emptySet(),
+    val everyDays: Int = 0,
+    val startDay: Long = 0,
+) {
+    fun isDue(day: Long): Boolean =
+        if (everyDays > 0) day >= startDay && (day - startDay) % everyDays == 0L
+        else java.time.LocalDate.ofEpochDay(day).dayOfWeek.value in weekdays
+
+    /** "Every Friday", "Every day", "Mon and Thu", "Every 2 days". */
+    val scheduleLabel: String get() {
+        if (everyDays > 0) return if (everyDays == 1) "Every day" else "Every $everyDays days"
+        if (weekdays.size == 7) return "Every day"
+        val names = weekdays.sorted().map {
+            java.time.DayOfWeek.of(it).getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)
+        }
+        return when (names.size) {
+            0 -> "No days chosen"
+            1 -> "Every ${names.first()}"
+            else -> names.map { it.take(3) }.let { it.dropLast(1).joinToString(", ") + " and " + it.last() }
+        }
+    }
+}
+
+/** How far into a wird surah the person got on [day] (highest ayah read). */
+data class WirdProgress(val day: Long, val upTo: Int)
+
 data class AppState(
     val selectedSurahId: Int = 67,
     val currentChunkIndex: Int = 0,
@@ -113,6 +146,13 @@ data class AppState(
     val surahsCompleted: Int = 0,
     val reviewItems: Map<Int, ReviewItem> = emptyMap(),
     val totalReviews: Int = 0,
+    /** The person's wird, in the order it's read on a day with several. */
+    val wird: List<WirdItem> = emptyList(),
+    /** Today's progress per wird item id; older days are ignored. */
+    val wirdProgress: Map<Long, WirdProgress> = emptyMap(),
+    val wirdsCompleted: Int = 0,
+    /** Tilawa Plus. Until billing is built, only switchable in debug builds. */
+    val isPro: Boolean = false,
     /** Ayahs read per day (epoch day → count), last ~90 days. */
     val dailyAyahs: Map<Long, Int> = emptyMap(),
 )

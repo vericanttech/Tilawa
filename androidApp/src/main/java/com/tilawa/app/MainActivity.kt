@@ -41,7 +41,8 @@ class MainActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent?) {
         when {
             intent?.hasExtra(EXTRA_GATE_PACKAGE) == true -> viewModel.showGate(intent.getStringExtra(EXTRA_GATE_PACKAGE))
-            intent?.data?.scheme == "tilawa" -> viewModel.showGate(null)
+            // The "Read now" notification after a pause: reads today's wird first, like the pause itself.
+            intent?.data?.scheme == "tilawa" -> viewModel.showGate(null, useWird = true)
         }
     }
 

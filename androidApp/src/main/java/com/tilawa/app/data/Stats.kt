@@ -34,6 +34,17 @@ object Stats {
         return withStreak(updated) to finishedPass
     }
 
+    /** Verses read outside the main surah (e.g. a wird): totals, history and streak only. */
+    fun recordVerses(state: AppState, ayahCount: Int): AppState = withStreak(
+        logDay(
+            state.copy(
+                totalAyahsRead = state.totalAyahsRead + ayahCount,
+                todayAyahsRead = state.todayAyahsRead + ayahCount,
+            ),
+            ayahCount,
+        ),
+    )
+
     /** Most overdue verse, else the first never reviewed, else the one due soonest. */
     fun nextReviewVerse(surah: Surah, state: AppState, now: Long = System.currentTimeMillis()): Verse? {
         val items = state.reviewItems
