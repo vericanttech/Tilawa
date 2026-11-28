@@ -125,7 +125,8 @@ class StateStore(context: Context) {
                     .put("surah", item.surahId)
                     .put("weekdays", org.json.JSONArray(item.weekdays.sorted()))
                     .put("everyDays", item.everyDays)
-                    .put("startDay", item.startDay),
+                    .put("startDay", item.startDay)
+                    .put("remindAt", item.remindAt ?: -1),
             )
         }
     }.toString()
@@ -141,6 +142,7 @@ class StateStore(context: Context) {
                 weekdays = (0 until (days?.length() ?: 0)).map { days!!.getInt(it) }.toSet(),
                 everyDays = o.optInt("everyDays"),
                 startDay = o.optLong("startDay"),
+                remindAt = o.optInt("remindAt", -1).takeIf { it >= 0 },
             )
         }
     }.getOrDefault(emptyList())

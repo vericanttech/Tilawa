@@ -108,7 +108,19 @@ data class WirdItem(
     val weekdays: Set<Int> = emptySet(),
     val everyDays: Int = 0,
     val startDay: Long = 0,
+    /** Minutes after midnight for its own reminder on its days (e.g. 540 = 9:00); null = only the regular reminders. */
+    val remindAt: Int? = null,
 ) {
+    /** "Every Friday · 9:00 AM". */
+    val fullLabel: String get() = remindAt?.let { "$scheduleLabel · ${timeLabel(it)}" } ?: scheduleLabel
+
+    companion object {
+        /** "9:00 AM". */
+        fun timeLabel(minutes: Int): String =
+            java.time.LocalTime.of(minutes / 60, minutes % 60)
+                .format(java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT))
+    }
+
     fun isDue(day: Long): Boolean =
         if (everyDays > 0) day >= startDay && (day - startDay) % everyDays == 0L
         else java.time.LocalDate.ofEpochDay(day).dayOfWeek.value in weekdays

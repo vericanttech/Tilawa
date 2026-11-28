@@ -29,7 +29,16 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDefaults
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -172,7 +181,7 @@ fun WirdSettings(vm: MainViewModel, onEdit: (WirdItem?) -> Unit) {
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(surah?.name.orEmpty(), color = if (locked) T.Muted else T.Ink, fontSize = 16.sp)
-                    Text(if (locked) "${item.scheduleLabel} · needs Tilawa Plus" else item.scheduleLabel, color = T.Muted, fontSize = 13.sp)
+                    Text(if (locked) "${item.scheduleLabel} · needs Tilawa Plus" else item.fullLabel, color = T.Muted, fontSize = 13.sp)
                 }
                 Text(surah?.nameArabic.orEmpty(), color = if (locked) T.Outline else T.Accent, fontFamily = ArabicFont, fontSize = 20.sp)
             }
@@ -231,7 +240,14 @@ fun WirdEditorSheet(vm: MainViewModel, editing: WirdItem?, dismiss: () -> Unit) 
     var byWeekday by remember { mutableStateOf(editing?.let { it.everyDays == 0 } ?: true) }
     var weekdays by remember { mutableStateOf(editing?.weekdays ?: setOf(5)) }
     var everyDays by remember { mutableIntStateOf(editing?.everyDays?.takeIf { it > 0 } ?: 2) }
+    var atTime by remember { mutableStateOf(editing?.let { it.remindAt != null } ?: true) }
+    var minutes by remember { mutableIntStateOf(editing?.remindAt ?: (9 * 60)) }
+    var pickingTime by remember { mutableStateOf(false) }
+    // The schedule step was opened from a suggestion (Back returns to the suggestions).
+    var fromPreset by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    // A set time needs notifications, even if the regular reminders were turned down.
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     ModalBottomSheet(
         onDismissRequest = dismiss,
@@ -255,8 +271,14 @@ fun WirdEditorSheet(vm: MainViewModel, editing: WirdItem?, dismiss: () -> Unit) 
                             Row(
                                 Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(T.SurfaceMuted)
                                     .clickable {
-                                        vm.addWird(preset.surahId, preset.weekdays, preset.everyDays)
-                                        dismiss()
+                                        surahId = preset.surahId
+                                        byWeekday = preset.everyDays == 0
+                                        weekdays = if (preset.everyDays == 0) preset.weekdays else setOf(5)
+                                        everyDays = preset.everyDays.takeIf { it > 0 } ?: 2
+                                        atTime = true
+                                        minutes = preset.remindAt
+                                        fromPreset = true
+                                        step = EditorStep.SCHEDULE
                                     }
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -298,6 +320,7 @@ fun WirdEditorSheet(vm: MainViewModel, editing: WirdItem?, dismiss: () -> Unit) 
                             Row(
                                 Modifier.fillMaxWidth().clickable {
                                     surahId = surah.id
+                                    fromPreset = false
                                     step = EditorStep.SCHEDULE
                                 }.padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -315,7 +338,30 @@ fun WirdEditorSheet(vm: MainViewModel, editing: WirdItem?, dismiss: () -> Unit) 
 
                 EditorStep.SCHEDULE -> {
                     val surah = vm.quran.surah(surahId)
-                    if (editing == null) SheetBack(surah?.name.orEmpty()) { step = EditorStep.SURAHS }
+                    if (pickingTime) {
+                        val picker = rememberTimePickerState(minutes / 60, minutes % 60)
+                        AlertDialog(
+                            onDismissRequest = { pickingTime = false },
+                            containerColor = T.Surface,
+                            confirmButton = {
+                                TextButton({ minutes = picker.hour * 60 + picker.minute; pickingTime = false }) { Text("Set", color = T.Accent) }
+                            },
+                            dismissButton = { TextButton({ pickingTime = false }) { Text("Cancel", color = T.Muted) } },
+                            text = {
+                                TimePicker(
+                                    picker,
+                                    colors = TimePickerDefaults.colors(
+                                        selectorColor = T.Accent,
+                                        timeSelectorSelectedContainerColor = T.AccentTint,
+                                        timeSelectorSelectedContentColor = T.Accent,
+                                        periodSelectorSelectedContainerColor = T.AccentTint,
+                                        periodSelectorSelectedContentColor = T.Accent,
+                                    ),
+                                )
+                            },
+                        )
+                    }
+                    if (editing == null) SheetBack(surah?.name.orEmpty()) { step = if (fromPreset) EditorStep.PRESETS else EditorStep.SURAHS }
                     else Text(surah?.name.orEmpty(), color = T.Ink, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text("When do you read it?", color = T.Ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -338,15 +384,37 @@ fun WirdEditorSheet(vm: MainViewModel, editing: WirdItem?, dismiss: () -> Unit) 
                             }
                             Text("Starting today.", color = T.Muted, fontSize = 13.sp)
                         }
+                        Text("Remind me", color = T.Ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+                        Segmented(listOf(true to "At a set time", false to "With my reminders"), atTime) { atTime = it }
+                        if (atTime) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("At", color = T.Ink, fontSize = 16.sp)
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    WirdItem.timeLabel(minutes),
+                                    color = T.Accent, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(T.AccentTint)
+                                        .clickable(role = Role.Button) { pickingTime = true }
+                                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                                )
+                            }
+                            Text("A reminder at this time on its days, as well as your regular ones.", color = T.Muted, fontSize = 13.sp)
+                        } else {
+                            Text("Your regular reminders go through it on its days.", color = T.Muted, fontSize = 13.sp)
+                        }
                         val valid = !byWeekday || weekdays.isNotEmpty()
                         PrimaryButton(if (editing == null) "Add to my wird" else "Save", enabled = valid) {
                             val days = if (byWeekday) weekdays else emptySet()
                             val every = if (byWeekday) 0 else everyDays
+                            val remindAt = if (atTime) minutes else null
+                            if (remindAt != null && Build.VERSION.SDK_INT >= 33) {
+                                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
                             if (editing == null) {
-                                vm.addWird(surahId, days, every)
+                                vm.addWird(surahId, days, every, remindAt)
                             } else {
                                 val restart = every != editing.everyDays
-                                vm.updateWird(editing.copy(weekdays = days, everyDays = every, startDay = if (restart) Stats.today() else editing.startDay))
+                                vm.updateWird(editing.copy(weekdays = days, everyDays = every, remindAt = remindAt, startDay = if (restart) Stats.today() else editing.startDay))
                             }
                             dismiss()
                         }

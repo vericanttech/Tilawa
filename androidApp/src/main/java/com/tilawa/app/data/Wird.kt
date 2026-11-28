@@ -6,14 +6,15 @@ object Wird {
     const val FREE_LIMIT = 1
 
     /** One-tap suggestions for the common ones. */
-    data class Preset(val surahId: Int, val weekdays: Set<Int> = emptySet(), val everyDays: Int = 0, val note: String)
+    /** [remindAt]: suggested reminder time, minutes after midnight. */
+    data class Preset(val surahId: Int, val weekdays: Set<Int> = emptySet(), val everyDays: Int = 0, val note: String, val remindAt: Int = 9 * 60)
 
     val presets = listOf(
-        Preset(18, weekdays = setOf(5), note = "Al-Kahf on Fridays"),
-        Preset(67, everyDays = 1, note = "Al-Mulk every night"),
-        Preset(36, everyDays = 2, note = "Ya-Sin every 2 days"),
-        Preset(56, everyDays = 1, note = "Al-Waqi'ah every night"),
-        Preset(32, everyDays = 1, note = "As-Sajdah every night"),
+        Preset(18, weekdays = setOf(5), note = "Al-Kahf on Fridays", remindAt = 9 * 60),
+        Preset(67, everyDays = 1, note = "Al-Mulk every night", remindAt = 21 * 60),
+        Preset(36, everyDays = 2, note = "Ya-Sin every 2 days", remindAt = 7 * 60),
+        Preset(56, everyDays = 1, note = "Al-Waqi'ah every night", remindAt = 21 * 60),
+        Preset(32, everyDays = 1, note = "As-Sajdah every night", remindAt = 21 * 60),
     )
 
     fun canAdd(state: AppState): Boolean = state.isPro || state.wird.size < FREE_LIMIT

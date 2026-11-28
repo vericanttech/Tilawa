@@ -60,7 +60,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         writePauseText()
         val reminderChanged = before.remindersOn != state.remindersOn || before.remindEveryHours != state.remindEveryHours ||
             before.remindFrom != state.remindFrom || before.remindUntil != state.remindUntil ||
-            before.hasCompletedOnboarding != state.hasCompletedOnboarding
+            before.hasCompletedOnboarding != state.hasCompletedOnboarding ||
+            before.wird != state.wird || before.isPro != state.isPro
         if (reminderChanged) rescheduleReminders()
     }
 
@@ -212,9 +213,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // MARK: Wird
 
-    fun addWird(surahId: Int, weekdays: Set<Int>, everyDays: Int) {
+    fun addWird(surahId: Int, weekdays: Set<Int>, everyDays: Int, remindAt: Int? = null) {
         if (!Wird.canAdd(state)) return
-        val item = WirdItem(System.currentTimeMillis(), surahId, weekdays, everyDays, Stats.today())
+        val item = WirdItem(System.currentTimeMillis(), surahId, weekdays, everyDays, Stats.today(), remindAt)
         update { it.copy(wird = it.wird + item) }
     }
 
@@ -231,9 +232,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Muraja'ah: the person recalled (or asked to see again) one verse. */
-    fun finishReview(verse: Verse, recalled: Boolean) {
-        val surah = surah ?: return
+    /** Records one muraja'ah verse (several can be reviewed in one sitting). */
+    fun recordReview(verse: Verse, recalled: Boolean) {
         update { Stats.recordReview(it, verse.id, recalled) }
+    }
+
+    /** Ends a muraja'ah sitting: [reviewed] holds (ayah, recalled), already recorded. */
+    fun finishReviews(reviewed: List<Pair<Int, Boolean>>) {
+        val surah = surah ?: return
+        val (lastId, lastRecalled) = reviewed.lastOrNull() ?: return dismissGate()
         val now = System.currentTimeMillis()
         val upcoming = state.reviewItems.entries
             .filter { it.value.dueAt > now }
@@ -242,10 +249,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .joinToString("\n") { "Ayah ${it.key} · ${Stats.relativeDue(it.value.dueAt)}" }
         finish(
             DoneInfo(
-                headline = if (recalled) "Ayah ${verse.id} reviewed" else "We’ll bring ayah ${verse.id} back soon",
+                headline = when {
+                    reviewed.size > 1 -> "${reviewed.size} ayahs reviewed"
+                    lastRecalled -> "Ayah $lastId reviewed"
+                    else -> "We’ll bring ayah $lastId back soon"
+                },
                 chip = "${Stats.strongVerseCount(surah, state)} of ${surah.totalVerses} strong",
                 cardLabel = "Coming up next",
-                cardText = upcoming.ifEmpty { "Ayah ${verse.id} · soon" },
+                cardText = upcoming.ifEmpty { "Ayah $lastId · soon" },
                 cardTextIsArabic = false,
                 cardRef = "Spaced out so every verse stays fresh",
             ),

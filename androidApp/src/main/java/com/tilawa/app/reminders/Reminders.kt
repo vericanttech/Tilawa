@@ -33,6 +33,26 @@ object Reminders {
     private const val CHANNEL_ID = "tilawa_reminders"
     private const val NOTIFICATION_ID = 4108
     private const val KEY_NEXT_AT = "reminderNextAt"
+    private const val EXTRA_WIRD = "wirdId"
+
+    /** The next time a wird has its own reminder (on its days, skipping one already read today). */
+    fun nextWirdAt(state: AppState, quran: QuranRepository?, now: ZonedDateTime = ZonedDateTime.now()): Pair<ZonedDateTime, Long>? {
+        val today = now.toLocalDate()
+        return (0L..8L).asSequence().flatMap { offset ->
+            val date = today.plusDays(offset)
+            val day = date.toEpochDay()
+            Wird.activeItems(state).asSequence().filter { it.remindAt != null && it.isDue(day) }.mapNotNull { item ->
+                val minutes = item.remindAt ?: return@mapNotNull null
+                val at = date.atTime(minutes / 60, minutes % 60).atZone(now.zone)
+                if (!at.isAfter(now)) return@mapNotNull null
+                if (offset == 0L) {
+                    val surah = quran?.surah(item.surahId)
+                    if (surah != null && Wird.isFinished(state, item, surah, day)) return@mapNotNull null
+                }
+                at to item.id
+            }
+        }.minByOrNull { it.first }
+    }
 
     /** The next reminder after [from], inside the window. */
     fun nextAt(state: AppState, from: ZonedDateTime = ZonedDateTime.now()): ZonedDateTime {
@@ -51,14 +71,19 @@ object Reminders {
     /** Sets the next reminder a full interval from now (after reading, opening the app, or a reminder firing). */
     fun reschedule(context: Context, state: AppState = StateStore(context).load()) {
         val alarms = context.getSystemService(AlarmManager::class.java)
-        val pending = alarmIntent(context)
-        alarms.cancel(pending)
+        alarms.cancel(alarmIntent(context, null))
         val prefs = context.getSharedPreferences(StateStore.PREFS, Context.MODE_PRIVATE)
-        if (!state.remindersOn || !state.hasCompletedOnboarding) {
+        // The regular reminder, or a wird's own time if that comes first (that one rings even with regular ones off).
+        val regular = if (state.remindersOn) nextAt(state) else null
+        val wird = nextWirdAt(state, QuranRepository(context))
+        val useWird = wird != null && (regular == null || wird.first.isBefore(regular))
+        val next = if (useWird) wird!!.first else regular
+        if (next == null || !state.hasCompletedOnboarding) {
             prefs.edit().remove(KEY_NEXT_AT).apply()
             return
         }
-        val at = nextAt(state).toInstant().toEpochMilli()
+        val pending = alarmIntent(context, if (useWird) wird!!.second else null)
+        val at = next.toInstant().toEpochMilli()
         // Within 10 minutes is close enough for a gentle reminder, and needs no exact-alarm permission
         // (a plain inexact alarm was allowed to drift by up to an hour).
         alarms.setWindow(AlarmManager.RTC_WAKEUP, at, 10 * 60_000L, pending)
@@ -70,7 +95,6 @@ object Reminders {
     fun ensureScheduled(context: Context) {
         val state = StateStore(context).load()
         val next = context.getSharedPreferences(StateStore.PREFS, Context.MODE_PRIVATE).getLong(KEY_NEXT_AT, 0)
-        if (!state.remindersOn) return reschedule(context, state)
         if (next < System.currentTimeMillis()) reschedule(context, state)
     }
 
@@ -79,10 +103,10 @@ object Reminders {
         context.getSharedPreferences(StateStore.PREFS, Context.MODE_PRIVATE).getLong(KEY_NEXT_AT, 0).takeIf { it > 0 }
 
     /** Posts a reminder now with the next verses to read. */
-    fun post(context: Context) {
+    fun post(context: Context, wirdId: Long? = null) {
         val state = StateStore(context).load()
         val quran = QuranRepository(context)
-        val content = content(state, quran) ?: return
+        val content = wirdId?.let { wirdContent(state, quran, it) } ?: content(state, quran) ?: return
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_ID, "Reading reminders", NotificationManager.IMPORTANCE_DEFAULT).apply {
@@ -116,6 +140,17 @@ object Reminders {
     }
 
     private data class Content(val title: String, val text: String, val bigText: String, val action: String)
+
+    /** A wird's own reminder at its time. */
+    private fun wirdContent(state: AppState, quran: QuranRepository, id: Long): Content? {
+        val item = state.wird.firstOrNull { it.id == id } ?: return null
+        val surah = quran.surah(item.surahId) ?: return null
+        val upTo = Wird.upTo(state, item)
+        val verses = Wird.nextVerses(surah, upTo)
+        if (verses.isEmpty()) return null
+        val title = if (upTo == 0) "Time for your wird · ${surah.name}" else "Continue your wird · ${surah.name}"
+        return reading(title, surah.name, surah.id, verses, state)
+    }
 
     /** The verses the reminder offers: today's wird first, else the main surah (a recall in muraja'ah). */
     private fun content(state: AppState, quran: QuranRepository): Content? {
@@ -155,12 +190,15 @@ object Reminders {
         )
     }
 
-    private fun alarmIntent(context: Context): PendingIntent = PendingIntent.getBroadcast(
+    private fun alarmIntent(context: Context, wirdId: Long?): PendingIntent = PendingIntent.getBroadcast(
         context,
         0,
-        Intent(context, ReminderReceiver::class.java).setAction(ReminderReceiver.ACTION_REMIND),
+        Intent(context, ReminderReceiver::class.java).setAction(ReminderReceiver.ACTION_REMIND)
+            .apply { if (wirdId != null) putExtra(EXTRA_WIRD, wirdId) },
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
+
+    fun wirdIdOf(intent: Intent): Long? = intent.getLongExtra(EXTRA_WIRD, -1).takeIf { it >= 0 }
 }
 
 /** Fires a reminder and sets the next one; after a restart, sets the next one again. */
@@ -171,8 +209,9 @@ class ReminderReceiver : BroadcastReceiver() {
         thread {
             try {
                 val state = StateStore(context).load()
-                if (intent.action == ACTION_REMIND && state.remindersOn && state.hasCompletedOnboarding) {
-                    Reminders.post(context)
+                val wirdId = Reminders.wirdIdOf(intent)
+                if (intent.action == ACTION_REMIND && state.hasCompletedOnboarding && (state.remindersOn || wirdId != null)) {
+                    Reminders.post(context, wirdId)
                 }
                 Reminders.reschedule(context, state)
             } finally {

@@ -67,6 +67,8 @@ import com.tilawa.app.Segment
 import androidx.compose.foundation.ScrollState
 import androidx.compose.runtime.mutableStateListOf
 import com.tilawa.app.data.DoneInfo
+import com.tilawa.app.data.Features
+import com.tilawa.app.data.ReviewItem
 import com.tilawa.app.data.ReadIn
 import com.tilawa.app.data.ReadingGoal
 import com.tilawa.app.data.Stats
@@ -385,24 +387,44 @@ private fun MenuToggle(label: String, detail: String, checked: Boolean, enabled:
 private fun RecallScreen(vm: MainViewModel) {
     val state = vm.state
     val surah = vm.surah ?: return
-    // Chosen once per pause, so recording the review doesn't swap the verse underneath.
-    val verse = remember { Stats.nextReviewVerse(surah, state) } ?: return
-    val stage = remember { Stats.reviewStage(verse.id, state) }
-    var revealed by remember { mutableStateOf(false) }
-    val minimum = remember {
-        if (stage == 3) 0 else (verse.durationSeconds * state.readingSpeed.secondsPerWord / 0.65).toInt().coerceAtLeast(5)
+    // Chosen per verse, so recording the review doesn't swap the verse underneath.
+    var verse by remember { mutableStateOf(Stats.nextReviewVerse(surah, state)) }
+    val current = verse ?: return
+    // Verses reviewed in this sitting (ayah, recalled), and whether the current one is marked already.
+    var reviewed by remember { mutableStateOf(listOf<Pair<Int, Boolean>>()) }
+    var marked by remember(current.id) { mutableStateOf(false) }
+    val stage = remember(current.id) { Stats.reviewStage(current.id, vm.state) }
+    var revealed by remember(current.id) { mutableStateOf(false) }
+    val minimum = remember(current.id) {
+        if (stage == 3) 0 else (current.durationSeconds * state.readingSpeed.secondsPerWord / 0.65).toInt().coerceAtLeast(5)
     }
-    var elapsed by remember { mutableIntStateOf(0) }
+    var elapsed by remember(current.id) { mutableIntStateOf(0) }
     val canClose = vm.isManualGate
 
+    // What "Next ayah" would show: the next one due, skipping the current one and those reviewed in this sitting.
+    val skip = reviewed.map { it.first }.toSet() + current.id
+    val upcoming = remember(reviewed, current.id, vm.state) {
+        val hidden = vm.state.reviewItems.toMutableMap()
+        skip.forEach { id -> hidden[id] = (hidden[id] ?: ReviewItem(stage = Stats.NEW_VERSE_STAGE)).copy(dueAt = Long.MAX_VALUE) }
+        Stats.nextReviewVerse(surah, vm.state.copy(reviewItems = hidden))?.takeIf { it.id !in skip }
+    }
+    fun record(recalled: Boolean) {
+        if (marked) return
+        vm.recordReview(current, recalled)
+        reviewed = reviewed + (current.id to recalled)
+        marked = true
+    }
+    fun end() = vm.finishReviews(reviewed)
+
     BackHandler { if (canClose) vm.dismissGate() }
-    LaunchedEffect(Unit) { while (elapsed < minimum) { delay(1_000); elapsed += 1 } }
+    LaunchedEffect(current.id) { while (elapsed < minimum) { delay(1_000); elapsed += 1 } }
 
     val caption = when {
+        marked -> "Noted. Review another ayah, or stop here."
         revealed && stage == 3 -> "Words you recalled are shown in green."
         revealed -> "Here’s the full verse."
         stage == 0 -> "Read the whole verse, so it becomes familiar."
-        stage == 1 -> "Some words have faded. Fill them in as you read."
+        stage == 1 -> "Some words are hidden. Fill them in as you read."
         stage == 2 -> "Just the first word. Recite the rest in your head."
         else -> "Recall the whole verse, then check yourself."
     }
@@ -415,36 +437,59 @@ private fun RecallScreen(vm: MainViewModel) {
             verticalArrangement = Arrangement.spacedBy(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            VerseMark(verse.id)
+            VerseMark(current.id)
             Text(caption, color = T.Muted, fontSize = 14.sp, textAlign = TextAlign.Center)
             // People who don't read the Arabic script recall the transliteration instead.
             val arabic = state.readIn == ReadIn.ARABIC
-            FadingVerse(if (arabic) verse.words else verse.transliterationWords, stage, revealed, arabic)
-            if (stage == 0 && arabic && state.showTransliteration) Translit(verse.transliteration, 20)
-            if (stage == 0 && !arabic && state.showArabic) ArabicText(verse.text, 28, T.MutedStrong)
+            FadingVerse(if (arabic) current.words else current.transliterationWords, stage, revealed, arabic)
+            if (stage == 0 && arabic && state.showTransliteration) Translit(current.transliteration, 20)
+            if (stage == 0 && !arabic && state.showArabic) ArabicText(current.text, 28, T.MutedStrong)
             VerseDivider()
             Overline(if (stage == 3 && !revealed) "Recall the verse that means" else "Meaning", color = T.Muted)
-            Text(translationText(verse.translation ?: "Ayah ${verse.id} of ${surah.name}"), color = T.InkSoft, fontFamily = SerifFont, fontSize = 20.sp, lineHeight = 28.sp, textAlign = TextAlign.Center)
-            if (revealed || stage < 3) Footnotes(verse.footnotes)
+            Text(translationText(current.translation ?: "Ayah ${current.id} of ${surah.name}"), color = T.InkSoft, fontFamily = SerifFont, fontSize = 20.sp, lineHeight = 28.sp, textAlign = TextAlign.Center)
+            if (revealed || stage < 3) Footnotes(current.footnotes)
         }
 
-        BottomBar(label = "Review", trailingLabel = "Ayah ${verse.id} of ${surah.totalVerses}") {
+        val barLabel = when (reviewed.size) {
+            0 -> "Review"
+            1 -> "1 ayah reviewed"
+            else -> "${reviewed.size} ayahs reviewed"
+        }
+        // "Next ayah" (when there's another) and "Done"; [recalled] marks the current verse first, null if marked already.
+        @Composable
+        fun NextOrDone(recalled: Boolean?) {
+            val next = upcoming
+            if (next != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SoftButton("Next ayah", Modifier.weight(1f)) {
+                        recalled?.let { record(it) }
+                        verse = next
+                    }
+                    Box(Modifier.weight(1f)) { PrimaryButton("Done") { recalled?.let { record(it) }; end() } }
+                }
+            } else {
+                PrimaryButton("Done") { recalled?.let { record(it) }; end() }
+            }
+        }
+        BottomBar(label = barLabel, trailingLabel = "Ayah ${current.id} of ${surah.totalVerses}") {
             when {
+                marked -> NextOrDone(null)
                 stage == 3 && !revealed -> PrimaryButton("Tap to check") { revealed = true }
                 stage == 3 -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SoftButton("Review again soon", Modifier.weight(1f)) { vm.finishReview(verse, recalled = false) }
-                    Box(Modifier.weight(1f)) { PrimaryButton("I knew it") { vm.finishReview(verse, recalled = true) } }
+                    // Say how it went; then offer the next ayah, or finish when there's none.
+                    SoftButton("Review again soon", Modifier.weight(1f)) { record(false); if (upcoming == null) end() }
+                    Box(Modifier.weight(1f)) { PrimaryButton("I knew it") { record(true); if (upcoming == null) end() } }
                 }
                 elapsed < minimum -> {
                     val left = (minimum - elapsed).coerceAtLeast(0)
                     WaitBar("Take your time · ${left}s", "Keep reading. $left seconds left")
                 }
                 else -> {
-                    PrimaryButton("Done") { vm.finishReview(verse, recalled = !revealed) }
+                    NextOrDone(!revealed)
                     if (stage > 0 && !revealed) PlainButton("Show the full verse") { revealed = true }
                 }
             }
-            Text("Your app opens either way", color = T.Muted, fontSize = 12.sp)
+            if (Features.APP_PAUSING) Text("Your app opens either way", color = T.Muted, fontSize = 12.sp)
         }
     }
 }
@@ -465,12 +510,11 @@ private fun FadingVerse(words: List<String>, stage: Int, revealed: Boolean, arab
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             words.forEachIndexed { index, word ->
-                val hidden = (stage == 2 && index > 0) || stage == 3
-                val faded = stage == 1 && index % 2 == 1
+                // Masked words are fully hidden (a dotted line keeps their place), so they have to be recalled.
+                val hidden = (stage == 1 && index % 2 == 1) || (stage == 2 && index > 0) || stage == 3
                 val target = when {
-                    revealed && (hidden || faded) -> T.Accent
+                    revealed && hidden -> T.Accent
                     hidden -> Color.Transparent
-                    faded -> T.Outline
                     else -> T.Ink
                 }
                 val color by animateColorAsState(target, label = "word")
