@@ -467,7 +467,7 @@ struct WirdSettingsList: View {
                                 Text(surah?.name ?? "")
                                     .font(.system(size: 16))
                                     .foregroundColor(locked ? DesignTokens.muted : DesignTokens.ink)
-                                Text(locked ? "\(item.scheduleLabel) · needs Tilawa Plus" : item.scheduleLabel)
+                                Text(locked ? "\(item.scheduleLabel) · needs Tilawa Plus" : item.fullLabel)
                                     .font(.system(size: 13))
                                     .foregroundColor(DesignTokens.muted)
                             }
@@ -550,7 +550,11 @@ struct WirdEditorSheet: View {
     @State private var byWeekday = true
     @State private var weekdays: Set<Int> = [5]
     @State private var everyDays = 2
+    @State private var atTime = true
+    @State private var time = WirdEditorSheet.date(minutes: 9 * 60)
     @State private var query = ""
+    /// The schedule step was opened from a suggestion (Back returns to the suggestions).
+    @State private var fromPreset = false
 
     private let quran = QuranService.shared
 
@@ -563,7 +567,18 @@ struct WirdEditorSheet: View {
             _byWeekday = State(initialValue: editing.everyDays == 0)
             _weekdays = State(initialValue: editing.everyDays == 0 ? editing.weekdays : [5])
             _everyDays = State(initialValue: editing.everyDays > 0 ? editing.everyDays : 2)
+            _atTime = State(initialValue: editing.remindAt != nil)
+            _time = State(initialValue: Self.date(minutes: editing.remindAt ?? 9 * 60))
         }
+    }
+
+    static func date(minutes: Int) -> Date {
+        Calendar.current.date(byAdding: .minute, value: minutes, to: Calendar.current.startOfDay(for: Date())) ?? Date()
+    }
+
+    private var minutes: Int {
+        let parts = Calendar.current.dateComponents([.hour, .minute], from: time)
+        return (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
     }
 
     var body: some View {
@@ -598,8 +613,14 @@ struct WirdEditorSheet: View {
             ForEach(Wird.presets.filter { !taken.contains($0.surahId) }, id: \.surahId) { preset in
                 if let surah = quran.surah(id: preset.surahId) {
                     Button {
-                        appState.addWird(surahId: preset.surahId, weekdays: preset.weekdays, everyDays: preset.everyDays)
-                        dismiss()
+                        surahId = preset.surahId
+                        byWeekday = preset.everyDays == 0
+                        weekdays = preset.everyDays == 0 ? preset.weekdays : [5]
+                        everyDays = preset.everyDays > 0 ? preset.everyDays : 2
+                        atTime = true
+                        time = Self.date(minutes: preset.remindAt)
+                        fromPreset = true
+                        step = .schedule
                     } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
@@ -648,6 +669,7 @@ struct WirdEditorSheet: View {
                     ForEach(list) { surah in
                         Button {
                             surahId = surah.id
+                            fromPreset = false
                             step = .schedule
                         } label: {
                             HStack {
@@ -684,7 +706,7 @@ struct WirdEditorSheet: View {
         return ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
                 if editing == nil {
-                    back(surah?.name ?? "") { step = .surahs }
+                    back(surah?.name ?? "") { step = fromPreset ? .presets : .surahs }
                 } else {
                     Text(surah?.name ?? "")
                         .font(.system(size: 22, weight: .bold))
@@ -711,6 +733,28 @@ struct WirdEditorSheet: View {
                         Text(everyDays == 1 ? "day" : "days").font(.system(size: 16)).foregroundColor(DesignTokens.ink)
                     }
                     Text("Starting today.")
+                        .font(.system(size: 13))
+                        .foregroundColor(DesignTokens.muted)
+                }
+                Text("Remind me")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(DesignTokens.ink)
+                    .padding(.top, 6)
+                TilawaSegmented(options: [(true, "At a set time"), (false, "With my reminders")], selection: $atTime)
+                if atTime {
+                    HStack {
+                        Text("At").font(.system(size: 16)).foregroundColor(DesignTokens.ink)
+                        DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .tint(DesignTokens.accent)
+                        Spacer()
+                    }
+                    Text("A reminder at this time on its days, as well as your regular ones.")
+                        .font(.system(size: 13))
+                        .foregroundColor(DesignTokens.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("Your regular reminders go through it on its days.")
                         .font(.system(size: 13))
                         .foregroundColor(DesignTokens.muted)
                 }
@@ -770,15 +814,21 @@ struct WirdEditorSheet: View {
     private func save() {
         let days = byWeekday ? weekdays : []
         let every = byWeekday ? 0 : everyDays
+        let remindAt = atTime ? minutes : nil
+        if remindAt != nil {
+            // A set time needs notifications, even if the regular reminders were turned down.
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        }
         if let editing {
             var item = editing
             item.weekdays = days
             item.everyDays = every
+            item.remindAt = remindAt
             // A new "every N days" rhythm starts today.
             if every != editing.everyDays { item.startDay = Calendar.current.startOfDay(for: Date()) }
             appState.updateWird(item)
         } else {
-            appState.addWird(surahId: surahId, weekdays: days, everyDays: every)
+            appState.addWird(surahId: surahId, weekdays: days, everyDays: every, remindAt: remindAt)
         }
         dismiss()
     }

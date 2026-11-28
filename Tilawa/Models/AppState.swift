@@ -124,6 +124,25 @@ struct WirdItem: Codable, Equatable, Identifiable {
     /// Every N days from `startDay` (1 = every day); 0 means use `weekdays`.
     var everyDays: Int = 0
     var startDay: Date = Calendar.current.startOfDay(for: Date())
+    /// Minutes after midnight for its own reminder on its days (e.g. 540 = 9:00); nil = only the regular reminders.
+    var remindAt: Int? = nil
+
+    /// "9:00 AM".
+    static func timeLabel(_ minutes: Int) -> String {
+        var parts = DateComponents()
+        parts.hour = minutes / 60
+        parts.minute = minutes % 60
+        let date = Calendar.current.date(from: parts) ?? Date()
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f.string(from: date)
+    }
+
+    /// "Every Friday · 9:00 AM".
+    var fullLabel: String {
+        remindAt.map { "\(scheduleLabel) · \(Self.timeLabel($0))" } ?? scheduleLabel
+    }
 
     /// Monday-first weekday number (1…7) of a date.
     static func weekday(of date: Date) -> Int {
@@ -265,7 +284,11 @@ struct AppState: Codable {
 
     /// The reminder settings, compared to know when to reschedule.
     var reminderKey: [Int] {
-        [remindersOn ? 1 : 0, remindEveryHours, remindFrom, remindUntil, hasCompletedOnboarding ? 1 : 0]
+        var key = [remindersOn ? 1 : 0, remindEveryHours, remindFrom, remindUntil, hasCompletedOnboarding ? 1 : 0, isPro ? 1 : 0]
+        for item in wird {
+            key += [item.id, item.surahId, item.everyDays, item.weekdays.reduce(0) { $0 | (1 << $1) }, item.remindAt ?? -1]
+        }
+        return key
     }
 }
 

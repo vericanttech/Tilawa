@@ -171,10 +171,10 @@ final class AppStateStore: ObservableObject {
 
     // MARK: - Wird
 
-    func addWird(surahId: Int, weekdays: Set<Int>, everyDays: Int) {
+    func addWird(surahId: Int, weekdays: Set<Int>, everyDays: Int, remindAt: Int? = nil) {
         guard Wird.canAdd(state) else { return }
         let id = (state.wird.map(\.id).max() ?? 0) + 1
-        state.wird.append(WirdItem(id: id, surahId: surahId, weekdays: weekdays, everyDays: everyDays))
+        state.wird.append(WirdItem(id: id, surahId: surahId, weekdays: weekdays, everyDays: everyDays, remindAt: remindAt))
     }
 
     func updateWird(_ item: WirdItem) {
@@ -207,6 +207,8 @@ enum Reminders {
     /// How far ahead reminders are queued (iOS keeps at most 64 pending notifications per app).
     static let daysAhead = 3
     static let maxQueued = 48
+    /// Ids 48..<64 are for wird reminders at their own time.
+    static let maxWirdQueued = 16
 
     /// The next reminder after `from`, inside the window.
     static func nextAt(_ state: AppState, from: Date) -> Date {
@@ -227,28 +229,58 @@ enum Reminders {
         let center = UNUserNotificationCenter.current()
         // Fixed ids, removed in the same order as the adds below (a lookup first would race with them).
         center.removePendingNotificationRequests(withIdentifiers: (0..<64).map { "\(idPrefix)\($0)" })
-        guard state.remindersOn, state.hasCompletedOnboarding else { return nil }
+        guard state.hasCompletedOnboarding else { return nil }
 
         let quran = QuranService.shared
         if quran.surahs.isEmpty { quran.load() }
         let horizon = now.addingTimeInterval(TimeInterval(daysAhead) * 24 * 3600)
         var times: [Date] = []
-        var t = nextAt(state, from: now)
-        while t < horizon && times.count < maxQueued {
-            times.append(t)
-            t = nextAt(state, from: t)
+        if state.remindersOn {
+            var t = nextAt(state, from: now)
+            while t < horizon && times.count < maxQueued {
+                times.append(t)
+                t = nextAt(state, from: t)
+            }
         }
         for (index, time) in times.enumerated() {
             guard let content = content(state: state, at: time, now: now, quran: quran) else { continue }
-            let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: time)
-            let request = UNNotificationRequest(
-                identifier: "\(idPrefix)\(index)",
-                content: content,
-                trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
-            )
-            center.add(request)
+            add(center, id: index, at: time, content: content)
         }
-        return times.first
+        // A wird with its own time is reminded then, on its days, even with the regular reminders off.
+        let wirdTimes = wirdTimes(state: state, now: now, horizon: horizon, quran: quran)
+        for (index, entry) in wirdTimes.enumerated() {
+            add(center, id: maxQueued + index, at: entry.time, content: entry.content)
+        }
+        return (times + wirdTimes.map { $0.time }).min()
+    }
+
+    private static func add(_ center: UNUserNotificationCenter, id: Int, at time: Date, content: UNMutableNotificationContent) {
+        let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: time)
+        center.add(UNNotificationRequest(
+            identifier: "\(idPrefix)\(id)",
+            content: content,
+            trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+        ))
+    }
+
+    /// Wird reminders at their own time over the next few days (skipping one already read today).
+    private static func wirdTimes(state: AppState, now: Date, horizon: Date, quran: QuranService) -> [(time: Date, content: UNMutableNotificationContent)] {
+        let cal = Calendar.current
+        var result: [(time: Date, content: UNMutableNotificationContent)] = []
+        for dayOffset in 0...daysAhead {
+            guard let day = cal.date(byAdding: .day, value: dayOffset, to: cal.startOfDay(for: now)) else { continue }
+            for item in Wird.activeItems(state) where item.isDue(on: day) {
+                guard let minutes = item.remindAt, let surah = quran.surah(id: item.surahId),
+                      let time = cal.date(byAdding: .minute, value: minutes, to: day),
+                      time > now, time < horizon else { continue }
+                let upTo = cal.isDate(day, inSameDayAs: now) ? Wird.upTo(state, item, now: now) : 0
+                let verses = Wird.nextVerses(surah, after: upTo)
+                guard !verses.isEmpty else { continue }
+                let title = upTo == 0 ? "Time for your wird · \(surah.name)" : "Continue your wird · \(surah.name)"
+                result.append((time, reading(title: title, surah: surah, verses: verses, state: state)))
+            }
+        }
+        return Array(result.sorted { $0.time < $1.time }.prefix(maxWirdQueued))
     }
 
     /// Clears reminders already showing (after the person reads).

@@ -566,9 +566,26 @@ struct RecallView: View {
     @State private var elapsed = 0
     @State private var minimum = 5
     @State private var timer: Timer?
+    /// Verses reviewed in this sitting (id, recalled), and whether the current one is already marked.
+    @State private var reviewed: [(id: Int, recalled: Bool)] = []
+    @State private var marked = false
 
     private let quran = QuranService.shared
     private var surah: Surah? { quran.surah(id: appState.state.selectedSurahId) }
+
+    /// The verse "Next ayah" would show: the next one due, skipping the current one and those reviewed in this sitting.
+    private var upcomingVerse: Verse? {
+        guard let surah else { return nil }
+        var state = appState.state
+        var skip = reviewed.map { $0.id }
+        if let verse { skip.append(verse.id) }
+        for id in skip {
+            state.reviewItems[id, default: ReviewItem(stage: StatsService.newVerseStage)].dueAt = .distantFuture
+        }
+        guard let next = StatsService.shared.nextReviewVerse(in: surah, state: state),
+              !skip.contains(next.id) else { return nil }
+        return next
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -610,11 +627,13 @@ struct RecallView: View {
                 .padding(.bottom, 24)
             }
 
-            GateBottomBar(label: "Review", detail: verse.map { "Ayah \($0.id) of \(surah?.totalVerses ?? 0)" } ?? "") {
+            GateBottomBar(label: barLabel, detail: verse.map { "Ayah \($0.id) of \(surah?.totalVerses ?? 0)" } ?? "") {
                 actions
-                Text("Your app opens either way")
-                    .font(.system(size: 12))
-                    .foregroundColor(DesignTokens.muted)
+                if Features.appPausing {
+                    Text("Your app opens either way")
+                        .font(.system(size: 12))
+                        .foregroundColor(DesignTokens.muted)
+                }
             }
         }
         .background(DesignTokens.paper.ignoresSafeArea())
@@ -622,11 +641,16 @@ struct RecallView: View {
         .onDisappear { timer?.invalidate(); timer = nil }
     }
 
+    private var barLabel: String {
+        reviewed.isEmpty ? "Review" : (reviewed.count == 1 ? "1 ayah reviewed" : "\(reviewed.count) ayahs reviewed")
+    }
+
     private var caption: String {
+        if marked { return "Noted. Review another ayah, or stop here." }
         if revealed { return stage == 3 ? "Words you recalled are shown in green." : "Here’s the full verse." }
         switch stage {
         case 0: return "Read the whole verse, so it becomes familiar."
-        case 1: return "Some words have faded. Fill them in as you read."
+        case 1: return "Some words are hidden. Fill them in as you read."
         case 2: return "Just the first word. Recite the rest in your head."
         default: return "Recall the whole verse, then check yourself."
         }
@@ -654,22 +678,23 @@ struct RecallView: View {
 
     @ViewBuilder
     private var actions: some View {
-        if stage == 3 && !revealed {
+        if marked {
+            nextOrDone(recalled: nil)
+        } else if stage == 3 && !revealed {
             Button("Tap to check") { withAnimation { revealed = true } }
                 .buttonStyle(PrimaryButtonStyle())
         } else if stage == 3 && revealed {
             HStack(spacing: 10) {
-                Button("Review again soon") { finish(recalled: false) }
+                Button("Review again soon") { mark(recalled: false) }
                     .buttonStyle(SoftButtonStyle())
-                Button("I knew it") { finish(recalled: true) }
+                Button("I knew it") { mark(recalled: true) }
                     .buttonStyle(PrimaryButtonStyle())
             }
         } else if elapsed < minimum {
             WaitLabel(text: "Take your time · \(max(0, minimum - elapsed))s")
         } else {
             VStack(spacing: 4) {
-                Button("Done") { finish(recalled: !revealed) }
-                    .buttonStyle(PrimaryButtonStyle())
+                nextOrDone(recalled: !revealed)
                 if stage > 0 && !revealed {
                     Button("Show the full verse") { withAnimation { revealed = true } }
                         .buttonStyle(TextButtonStyle())
@@ -678,8 +703,39 @@ struct RecallView: View {
         }
     }
 
+    /// "Next ayah" (when there's another to review) and "Done". `recalled` marks the current verse first; nil when it's marked already.
+    @ViewBuilder
+    private func nextOrDone(recalled: Bool?) -> some View {
+        if let upcoming = upcomingVerse {
+            HStack(spacing: 10) {
+                Button("Next ayah") {
+                    if let recalled { record(recalled: recalled) }
+                    show(upcoming)
+                }
+                .buttonStyle(SoftButtonStyle())
+                Button("Done") {
+                    if let recalled { record(recalled: recalled) }
+                    end()
+                }
+                .buttonStyle(PrimaryButtonStyle())
+            }
+        } else {
+            Button("Done") {
+                if let recalled { record(recalled: recalled) }
+                end()
+            }
+            .buttonStyle(PrimaryButtonStyle())
+        }
+    }
+
     private func start() {
         guard let surah, let next = StatsService.shared.nextReviewVerse(in: surah, state: appState.state) else { return }
+        show(next)
+    }
+
+    /// Shows `next` and starts its timer.
+    private func show(_ next: Verse) {
+        marked = false
         verse = next
         stage = StatsService.shared.reviewStage(for: next.id, state: appState.state)
         revealed = false
@@ -696,10 +752,27 @@ struct RecallView: View {
         timer = t
     }
 
-    private func finish(recalled: Bool) {
-        timer?.invalidate()
-        guard let surah, let verse else { return }
+    /// Records the current verse, once.
+    private func record(recalled: Bool) {
+        guard let verse, !marked else { return }
         appState.recordReview(verseId: verse.id, recalled: recalled)
+        reviewed.append((verse.id, recalled))
+        marked = true
+    }
+
+    /// Stage 3: the person said how it went. Offer the next ayah, or finish when there's none.
+    private func mark(recalled: Bool) {
+        if upcomingVerse == nil {
+            record(recalled: recalled)
+            end()
+        } else {
+            withAnimation { record(recalled: recalled) }
+        }
+    }
+
+    private func end() {
+        timer?.invalidate()
+        guard let surah, let last = reviewed.last else { onClose(); return }
         let strong = StatsService.shared.strongVerseCount(in: surah, state: appState.state)
         let upcoming = appState.state.reviewItems
             .filter { $0.value.dueAt > Date() }
@@ -707,11 +780,17 @@ struct RecallView: View {
             .prefix(2)
             .map { "Ayah \($0.key) · \(RelativeDue.string(for: $0.value.dueAt))" }
             .joined(separator: "\n")
+        let headline: String
+        if reviewed.count > 1 {
+            headline = "\(reviewed.count) ayahs reviewed"
+        } else {
+            headline = last.recalled ? "Ayah \(last.id) reviewed" : "We’ll bring ayah \(last.id) back soon"
+        }
         onFinish(DoneInfo(
-            headline: recalled ? "Ayah \(verse.id) reviewed" : "We’ll bring ayah \(verse.id) back soon",
+            headline: headline,
             chip: "\(strong) of \(surah.totalVerses) strong",
             cardLabel: "Coming up next",
-            cardText: upcoming.isEmpty ? "Ayah \(verse.id) · soon" : upcoming,
+            cardText: upcoming.isEmpty ? "Ayah \(last.id) · soon" : upcoming,
             cardRef: "Spaced out so every verse stays fresh"
         ))
     }
@@ -747,17 +826,16 @@ struct FadingVerse: View {
     }
 
     private func wordStyle(_ index: Int) -> (color: Color, line: Color) {
-        var hidden = false
-        var faded = false
+        // Masked words are fully hidden (a dotted line keeps their place), so they have to be recalled.
+        let hidden: Bool
         switch stage {
-        case 1: faded = index % 2 == 1
+        case 1: hidden = index % 2 == 1
         case 2: hidden = index > 0
         case 3: hidden = true
-        default: break
+        default: hidden = false
         }
-        if revealed && (hidden || faded) { return (DesignTokens.accent, .clear) }
+        if revealed && hidden { return (DesignTokens.accent, .clear) }
         if hidden { return (.clear, DesignTokens.outline) }
-        if faded { return (DesignTokens.outline, .clear) }
         return (DesignTokens.ink, .clear)
     }
 

@@ -196,14 +196,16 @@ enum Wird {
         var weekdays: Set<Int> = []
         var everyDays: Int = 0
         let note: String
+        /// Suggested reminder time, minutes after midnight.
+        var remindAt: Int = 9 * 60
     }
 
     static let presets: [Preset] = [
-        Preset(surahId: 18, weekdays: [5], note: "Al-Kahf on Fridays"),
-        Preset(surahId: 67, everyDays: 1, note: "Al-Mulk every night"),
-        Preset(surahId: 36, everyDays: 2, note: "Ya-Sin every 2 days"),
-        Preset(surahId: 56, everyDays: 1, note: "Al-Waqi'ah every night"),
-        Preset(surahId: 32, everyDays: 1, note: "As-Sajdah every night"),
+        Preset(surahId: 18, weekdays: [5], note: "Al-Kahf on Fridays", remindAt: 9 * 60),
+        Preset(surahId: 67, everyDays: 1, note: "Al-Mulk every night", remindAt: 21 * 60),
+        Preset(surahId: 36, everyDays: 2, note: "Ya-Sin every 2 days", remindAt: 7 * 60),
+        Preset(surahId: 56, everyDays: 1, note: "Al-Waqi'ah every night", remindAt: 21 * 60),
+        Preset(surahId: 32, everyDays: 1, note: "As-Sajdah every night", remindAt: 21 * 60),
     ]
 
     static func canAdd(_ state: AppState) -> Bool { state.isPro || state.wird.count < freeLimit }
